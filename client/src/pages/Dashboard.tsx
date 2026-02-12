@@ -1,7 +1,17 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, Briefcase, TrendingUp, FileText, Share2 } from "lucide-react";
-import { Link } from "wouter";
+import {
+  Box,
+  Button,
+  Container,
+  Flex,
+  Heading,
+  Text,
+  VStack,
+  HStack,
+  SimpleGrid,
+  Icon,
+} from "@chakra-ui/react"
+import { Plus, Briefcase, TrendingUp, FileText, Share2 } from "lucide-react"
+import { Link } from "wouter"
 
 export default function Dashboard() {
   const projects = [
@@ -12,101 +22,166 @@ export default function Dashboard() {
       status: "active",
       lastUpdated: "2 часа назад"
     }
-  ];
+  ]
 
   const stats = [
     { label: "Проектов", value: "1", icon: Briefcase, trend: "+0%" },
     { label: "Артефактов", value: "12", icon: FileText, trend: "+25%" },
     { label: "Публикаций", value: "48", icon: Share2, trend: "+12%" },
     { label: "Охват", value: "24.5K", icon: TrendingUp, trend: "+18%" }
-  ];
+  ]
 
   return (
-    <div className="min-h-screen bg-background">
+    <Box minH="100vh" bg="bg.canvas" color="fg.default">
       {/* Header */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+      <Box
+        borderBottomWidth="1px"
+        borderColor="border.default"
+        bg="bg.surface/50"
+        backdropFilter="blur(8px)"
+        position="sticky"
+        top={0}
+        zIndex={10}
+      >
+        <Container maxW="7xl" py={4}>
+          <Flex align="center" justify="space-between">
+            <VStack align="start" gap={0.5}>
+              <Heading
+                fontSize="2xl"
+                fontWeight="bold"
+                bgGradient="to-r"
+                gradientFrom="brand.400"
+                gradientTo="purple.400"
+                bgClip="text"
+                fontFamily="heading"
+              >
                 Marketos
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">AI Marketing Platform</p>
-            </div>
+              </Heading>
+              <Text fontSize="sm" color="fg.muted">
+                AI Marketing Platform
+              </Text>
+            </VStack>
             <Link href="/briefing/new">
-              <Button size="lg" className="gap-2">
-                <Plus className="w-4 h-4" />
+              <Button size="lg" colorPalette="brand">
+                <Icon mr={2}>
+                  <Plus size={16} />
+                </Icon>
                 Новый проект
               </Button>
             </Link>
-          </div>
-        </div>
-      </header>
+          </Flex>
+        </Container>
+      </Box>
 
-      <main className="container py-8">
+      <Container maxW="7xl" py={8}>
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={8}>
           {stats.map((stat) => (
-            <Card key={stat.label} className="bg-card/50 backdrop-blur-sm border-border/40">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-3xl font-bold mt-1">{stat.value}</p>
-                    <p className="text-xs text-green-500 mt-1">{stat.trend}</p>
-                  </div>
-                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <stat.icon className="w-6 h-6 text-primary" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <Box
+              key={stat.label}
+              bg="bg.surface/50"
+              backdropFilter="blur(8px)"
+              borderWidth="1px"
+              borderColor="border.default"
+              borderRadius="lg"
+              p={6}
+            >
+              <Flex align="center" justify="space-between">
+                <VStack align="start" gap={1}>
+                  <Text fontSize="sm" color="fg.muted">
+                    {stat.label}
+                  </Text>
+                  <Text fontSize="3xl" fontWeight="bold">
+                    {stat.value}
+                  </Text>
+                  <Text fontSize="xs" color="green.500">
+                    {stat.trend}
+                  </Text>
+                </VStack>
+                <Flex
+                  w={12}
+                  h={12}
+                  borderRadius="lg"
+                  bg="brand.500/10"
+                  align="center"
+                  justify="center"
+                >
+                  <Icon color="brand.400">
+                    <stat.icon size={24} />
+                  </Icon>
+                </Flex>
+              </Flex>
+            </Box>
           ))}
-        </div>
+        </SimpleGrid>
 
         {/* Projects */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold">Мои проекты</h2>
-          </div>
+        <VStack align="stretch" gap={4}>
+          <Flex align="center" justify="space-between" mb={4}>
+            <Heading fontSize="xl" fontWeight="semibold">
+              Мои проекты
+            </Heading>
+          </Flex>
           
-          <div className="grid gap-4">
-            {projects.map((project) => (
-              <Card key={project.id} className="bg-card/50 backdrop-blur-sm border-border/40 hover:border-primary/50 transition-all cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{project.name}</CardTitle>
-                      <CardDescription className="mt-1">
-                        Обновлено {project.lastUpdated}
-                      </CardDescription>
-                    </div>
-                    <div className="flex gap-2">
-                      <Link href={`/briefing/${project.id}`}>
-                        <Button variant="outline" size="sm">Открыть</Button>
-                      </Link>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">Прогресс брифинга</span>
-                      <span className="font-medium">{project.progress}%</span>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div 
-                        className="bg-gradient-to-r from-primary to-purple-500 h-2 rounded-full transition-all"
-                        style={{ width: `${project.progress}%` }}
+          {projects.map((project) => (
+            <Box
+              key={project.id}
+              bg="bg.surface/50"
+              backdropFilter="blur(8px)"
+              borderWidth="1px"
+              borderColor="border.default"
+              borderRadius="lg"
+              _hover={{ borderColor: "brand.500/50" }}
+              transition="all 0.2s"
+              cursor="pointer"
+            >
+              <Box p={6} borderBottomWidth="1px" borderColor="border.default">
+                <Flex align="start" justify="space-between">
+                  <VStack align="start" gap={1}>
+                    <Heading fontSize="lg">{project.name}</Heading>
+                    <Text fontSize="sm" color="fg.muted">
+                      Обновлено {project.lastUpdated}
+                    </Text>
+                  </VStack>
+                  <HStack gap={2}>
+                    <Link href={`/briefing/${project.id}`}>
+                      <Button variant="outline" size="sm">
+                        Открыть
+                      </Button>
+                    </Link>
+                  </HStack>
+                </Flex>
+              </Box>
+              <Box p={6}>
+                <VStack align="stretch" gap={2}>
+                  <Flex align="center" justify="space-between" fontSize="sm">
+                    <Text color="fg.muted">Прогресс брифинга</Text>
+                    <Text fontWeight="medium">{project.progress}%</Text>
+                  </Flex>
+                  <Box position="relative">
+                    <Box
+                      w="full"
+                      h={2}
+                      bg="bg.muted"
+                      borderRadius="full"
+                      overflow="hidden"
+                    >
+                      <Box
+                        h="full"
+                        w={`${project.progress}%`}
+                        bgGradient="to-r"
+                        gradientFrom="brand.500"
+                        gradientTo="purple.500"
+                        transition="all 0.3s"
                       />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </main>
-    </div>
-  );
+                    </Box>
+                  </Box>
+                </VStack>
+              </Box>
+            </Box>
+          ))}
+        </VStack>
+      </Container>
+    </Box>
+  )
 }
