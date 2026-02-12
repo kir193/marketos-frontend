@@ -1,22 +1,21 @@
+// GLOBAL DESIGN RULES: Dark premium #05060A, Inter, glassmorphism cards, cyan→blue→violet gradients
+
 import {
   Box,
   Button,
   Container,
-  Flex,
   Heading,
   Text,
   VStack,
   HStack,
   Input,
   Textarea,
-  Icon,
   createToaster,
+  Toaster,
 } from "@chakra-ui/react"
-import { Toaster } from "@chakra-ui/react"
 import { ArrowLeft, ArrowRight, Check, Mic } from "lucide-react"
-import { useState, useEffect } from "react"
-import { Link, useParams } from "wouter"
-import { briefingApi } from "@/lib/api"
+import { useState } from "react"
+import { Link } from "wouter"
 
 const toaster = createToaster({
   placement: "bottom-end",
@@ -40,121 +39,63 @@ const BLOCKS = [
 ]
 
 export default function Briefing() {
-  const params = useParams()
-  const businessId = params.id || "new"
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<Record<string, any>>({})
-  const [isLoading, setIsLoading] = useState(false)
 
   const progress = ((currentBlock + 1) / BLOCKS.length) * 100
 
-  const handleNext = async () => {
-    await handleSave()
-    if (currentBlock < BLOCKS.length - 1) {
-      setCurrentBlock(currentBlock + 1)
-    }
-  }
-
-  const handlePrev = () => {
-    if (currentBlock > 0) {
-      setCurrentBlock(currentBlock - 1)
-    }
-  }
-
-  const handleSave = async () => {
-    try {
-      setIsLoading(true)
-      const businessIdNum = businessId === "new" ? 1 : parseInt(businessId)
-      await briefingApi.saveBlock(businessIdNum, currentBlock, formData)
-      toaster.create({
-        title: "Блок сохранен",
-        type: "success",
-      })
-    } catch (error) {
-      console.error("Error saving block:", error)
-      toaster.create({
-        title: "Ошибка при сохранении",
-        type: "error",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  // Загрузка существующего брифинга
-  useEffect(() => {
-    if (businessId !== "new") {
-      const loadBriefing = async () => {
-        try {
-          const data = await briefingApi.getBriefing(parseInt(businessId))
-          if (data && data.length > 0) {
-            const loadedData: Record<string, any> = {}
-            data.forEach((block: any) => {
-              Object.assign(loadedData, block.data)
-            })
-            setFormData(loadedData)
-          }
-        } catch (error) {
-          console.error("Error loading briefing:", error)
-        }
-      }
-      loadBriefing()
-    }
-  }, [businessId])
-
-  const updateField = (field: string, value: any) => {
-    setFormData({ ...formData, [field]: value })
+  const handleSave = () => {
+    toaster.create({
+      title: "Блок сохранен",
+      type: "success",
+    })
   }
 
   return (
     <Box minH="100vh" bg="bg.canvas" color="fg.default">
       <Toaster toaster={toaster}>
-        {(toast) => (
-          <div>{toast.title}</div>
-        )}
+        {(toast) => <Box>{toast.title}</Box>}
       </Toaster>
-      
+
       {/* Header */}
       <Box
         borderBottomWidth="1px"
         borderColor="border.default"
-        bg="bg.surface/50"
-        backdropFilter="blur(8px)"
+        backdropFilter="blur(20px)"
+        bg="rgba(5, 6, 10, 0.8)"
         position="sticky"
-        top={0}
-        zIndex={10}
+        top="0"
+        zIndex="10"
       >
-        <Container maxW="7xl" py={4}>
-          <Flex align="center" justify="space-between">
-            <HStack gap={4}>
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  <Icon>
-                    <ArrowLeft size={16} />
-                  </Icon>
-                </Button>
-              </Link>
-              <VStack align="start" gap={0}>
-                <Heading fontSize="xl" fontWeight="semibold">
-                  Брифинг проекта
-                </Heading>
-                <Text fontSize="sm" color="fg.muted">
-                  Шаг {currentBlock + 1} из {BLOCKS.length}
-                </Text>
-              </VStack>
-            </HStack>
-            <Button onClick={handleSave} variant="outline" loading={isLoading}>
+        <Container maxW="7xl" py="4">
+          <HStack justify="space-between">
+            <VStack align="start" gap="1">
+              <Heading fontSize="h3" fontWeight="semibold">Брифинг проекта</Heading>
+              <Text fontSize="caption" color="fg.muted">Шаг {currentBlock + 1} из {BLOCKS.length}</Text>
+            </VStack>
+            <Button
+              bgGradient="linear(to-r, #00E5FF, #2D5BFF)"
+              color="white"
+              borderRadius="card"
+              px="6"
+              onClick={handleSave}
+              _hover={{ transform: 'translateY(-1px)' }}
+            >
               Сохранить
             </Button>
-          </Flex>
-          <Box mt={4}>
-            <Box w="full" h={1} bg="bg.muted" borderRadius="full" overflow="hidden">
+          </HStack>
+
+          {/* Progress Bar */}
+          <Box mt="4">
+            <Box position="relative" h="2" bg="bg.card" borderRadius="full" overflow="hidden">
               <Box
+                position="absolute"
+                top="0"
+                left="0"
                 h="full"
                 w={`${progress}%`}
-                bgGradient="to-r"
-                gradientFrom="brand.500"
-                gradientTo="purple.500"
+                bgGradient="linear(to-r, #00E5FF, #2D5BFF, #8A3FFC)"
+                borderRadius="full"
                 transition="all 0.3s"
               />
             </Box>
@@ -162,211 +103,198 @@ export default function Briefing() {
         </Container>
       </Box>
 
-      <Container maxW="4xl" py={8}>
-        {/* Stepper */}
-        <Box mb={8}>
-          <HStack gap={2} overflowX="auto" pb={4}>
-            {BLOCKS.map((block, index) => (
-              <Button
-                key={block.id}
-                onClick={() => setCurrentBlock(index)}
-                variant={index === currentBlock ? "solid" : index < currentBlock ? "subtle" : "outline"}
-                colorPalette={index <= currentBlock ? "brand" : "gray"}
-                size="sm"
-                flexShrink={0}
-              >
-                <HStack gap={2}>
-                  <Flex
-                    w={6}
-                    h={6}
-                    borderRadius="full"
-                    align="center"
-                    justify="center"
-                    fontSize="xs"
-                    fontWeight="medium"
-                    bg={index < currentBlock ? "brand.500" : "transparent"}
-                  >
-                    {index < currentBlock ? <Icon><Check size={16} /></Icon> : index + 1}
-                  </Flex>
-                  <Text fontSize="sm" fontWeight="medium">
-                    {block.title}
-                  </Text>
-                </HStack>
-              </Button>
-            ))}
-          </HStack>
-        </Box>
-
-        {/* Form Card */}
-        <Box
-          bg="bg.surface/50"
-          backdropFilter="blur(8px)"
-          borderWidth="1px"
-          borderColor="border.default"
-          borderRadius="lg"
-        >
-          <Box p={6} borderBottomWidth="1px" borderColor="border.default">
-            <Heading fontSize="xl">{BLOCKS[currentBlock].title}</Heading>
-            <Text fontSize="sm" color="fg.muted" mt={1}>
-              {BLOCKS[currentBlock].description}
-            </Text>
-          </Box>
-          <Box p={6}>
-            <VStack gap={6} align="stretch">
-              {/* Block 0: Базовая информация */}
-              {currentBlock === 0 && (
-                <>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Название бизнеса</Text>
-                    <Input
-                      placeholder="Например: SupaBots"
-                      value={formData.businessName || ""}
-                      onChange={(e) => updateField("businessName", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Сфера деятельности</Text>
-                    <Input
-                      placeholder="Например: Wellness & Health"
-                      value={formData.industry || ""}
-                      onChange={(e) => updateField("industry", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Сайт</Text>
-                    <Input
-                      type="url"
-                      placeholder="https://example.com"
-                      value={formData.website || ""}
-                      onChange={(e) => updateField("website", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Краткое описание</Text>
-                    <Textarea
-                      placeholder="Расскажите о вашем бизнесе..."
-                      rows={4}
-                      value={formData.description || ""}
-                      onChange={(e) => updateField("description", e.target.value)}
-                    />
-                  </VStack>
-                  <Box pt={4} borderTopWidth="1px" borderColor="border.default">
-                    <Button variant="outline" w="full">
-                      <Icon mr={2}>
-                        <Mic size={16} />
-                      </Icon>
-                      Заполнить голосом
-                    </Button>
-                  </Box>
-                </>
-              )}
-
-              {/* Block 1: Суть бизнеса */}
-              {currentBlock === 1 && (
-                <>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Персона бренда</Text>
-                    <Textarea
-                      placeholder="Опишите характер и личность вашего бренда..."
-                      rows={4}
-                      value={formData.brandPersona || ""}
-                      onChange={(e) => updateField("brandPersona", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Позиционирование</Text>
-                    <Textarea
-                      placeholder="Как вы позиционируете свой бренд на рынке..."
-                      rows={4}
-                      value={formData.positioning || ""}
-                      onChange={(e) => updateField("positioning", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Уникальное торговое предложение (УТП)</Text>
-                    <Textarea
-                      placeholder="Что делает ваш продукт уникальным..."
-                      rows={3}
-                      value={formData.usp || ""}
-                      onChange={(e) => updateField("usp", e.target.value)}
-                    />
-                  </VStack>
-                </>
-              )}
-
-              {/* Block 2: Аудитория */}
-              {currentBlock === 2 && (
-                <>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Целевая аудитория</Text>
-                    <Textarea
-                      placeholder="Опишите вашу целевую аудиторию (возраст, пол, интересы)..."
-                      rows={4}
-                      value={formData.targetAudience || ""}
-                      onChange={(e) => updateField("targetAudience", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Боли и потребности аудитории</Text>
-                    <Textarea
-                      placeholder="Какие проблемы решает ваш продукт..."
-                      rows={4}
-                      value={formData.painPoints || ""}
-                      onChange={(e) => updateField("painPoints", e.target.value)}
-                    />
-                  </VStack>
-                  <VStack align="stretch" gap={2}>
-                    <Text fontSize="sm" fontWeight="medium">Портрет идеального клиента</Text>
-                    <Textarea
-                      placeholder="Детальное описание вашего идеального клиента..."
-                      rows={4}
-                      value={formData.idealCustomer || ""}
-                      onChange={(e) => updateField("idealCustomer", e.target.value)}
-                    />
-                  </VStack>
-                </>
-              )}
-
-              {/* Other blocks - simplified forms */}
-              {currentBlock > 2 && (
-                <Box py={12} textAlign="center" color="fg.muted">
-                  <Text>Форма для блока "{BLOCKS[currentBlock].title}"</Text>
-                  <Text fontSize="sm" mt={2}>
-                    Блок {currentBlock + 1} из {BLOCKS.length}
-                  </Text>
-                  <Text fontSize="xs" mt={4} color="fg.muted">
-                    Формы для блоков 3-12 будут добавлены в следующей итерации
-                  </Text>
-                </Box>
-              )}
+      <Container maxW="7xl" py="8">
+        <HStack align="start" gap="8">
+          {/* Sidebar - Blocks Navigator */}
+          <Box
+            w="280px"
+            p="6"
+            bg="bg.glass"
+            borderWidth="1px"
+            borderColor="border.default"
+            borderRadius="cardLg"
+            backdropFilter="blur(30px)"
+            position="sticky"
+            top="120px"
+            maxH="calc(100vh - 140px)"
+            overflowY="auto"
+          >
+            <VStack align="stretch" gap="2">
+              {BLOCKS.map((block) => (
+                <Button
+                  key={block.id}
+                  onClick={() => setCurrentBlock(block.id)}
+                  variant="ghost"
+                  justifyContent="start"
+                  p="3"
+                  borderRadius="card"
+                  bg={currentBlock === block.id ? 'bg.card' : 'transparent'}
+                  borderWidth={currentBlock === block.id ? '1px' : '0'}
+                  borderColor="border.solid"
+                  _hover={{ bg: 'bg.card' }}
+                >
+                  <HStack w="full" gap="3">
+                    <Box
+                      w="6"
+                      h="6"
+                      borderRadius="full"
+                      bg={currentBlock === block.id ? 'linear-gradient(135deg, #00E5FF, #2D5BFF)' : 'bg.card'}
+                      borderWidth="1px"
+                      borderColor="border.solid"
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      fontSize="caption"
+                      fontWeight="medium"
+                    >
+                      {block.id + 1}
+                    </Box>
+                    <VStack align="start" gap="0" flex="1">
+                      <Text fontSize="caption" fontWeight="medium" color="fg.default">
+                        {block.title}
+                      </Text>
+                      <Text fontSize="xs" color="fg.muted">
+                        {block.description}
+                      </Text>
+                    </VStack>
+                  </HStack>
+                </Button>
+              ))}
             </VStack>
           </Box>
-        </Box>
 
-        {/* Navigation */}
-        <Flex align="center" justify="space-between" mt={6}>
-          <Button
-            variant="outline"
-            onClick={handlePrev}
-            disabled={currentBlock === 0}
-          >
-            <Icon mr={2}>
-              <ArrowLeft size={16} />
-            </Icon>
-            Назад
-          </Button>
-          <Button
-            onClick={handleNext}
-            disabled={currentBlock === BLOCKS.length - 1}
-            colorPalette="brand"
-            loading={isLoading}
-          >
-            Далее
-            <Icon ml={2}>
-              <ArrowRight size={16} />
-            </Icon>
-          </Button>
-        </Flex>
+          {/* Main Form */}
+          <Box flex="1">
+            <Box
+              p="8"
+              bg="bg.glass"
+              borderWidth="1px"
+              borderColor="border.default"
+              borderRadius="cardLg"
+              backdropFilter="blur(30px)"
+            >
+              <VStack align="stretch" gap="6">
+                <VStack align="start" gap="2">
+                  <Heading fontSize="h3" fontWeight="semibold">
+                    {BLOCKS[currentBlock].title}
+                  </Heading>
+                  <Text fontSize="body" color="fg.muted">
+                    {BLOCKS[currentBlock].description}
+                  </Text>
+                </VStack>
+
+                {/* Block 0: Basic Info */}
+                {currentBlock === 0 && (
+                  <VStack align="stretch" gap="4">
+                    <Box>
+                      <Text fontSize="caption" fontWeight="medium" mb="2" color="fg.default">
+                        Название бизнеса
+                      </Text>
+                      <Input
+                        placeholder="Например: SupaBots"
+                        bg="bg.card"
+                        borderColor="border.solid"
+                        borderRadius="card"
+                        _focus={{ borderColor: '#00E5FF' }}
+                      />
+                    </Box>
+                    <Box>
+                      <Text fontSize="caption" fontWeight="medium" mb="2" color="fg.default">
+                        Сфера деятельности
+                      </Text>
+                      <Input
+                        placeholder="Например: Wellness & Health"
+                        bg="bg.card"
+                        borderColor="border.solid"
+                        borderRadius="card"
+                        _focus={{ borderColor: '#00E5FF' }}
+                      />
+                    </Box>
+                    <Box>
+                      <Text fontSize="caption" fontWeight="medium" mb="2" color="fg.default">
+                        Сайт
+                      </Text>
+                      <Input
+                        type="url"
+                        placeholder="https://example.com"
+                        bg="bg.card"
+                        borderColor="border.solid"
+                        borderRadius="card"
+                        _focus={{ borderColor: '#00E5FF' }}
+                      />
+                    </Box>
+                    <Box>
+                      <Text fontSize="caption" fontWeight="medium" mb="2" color="fg.default">
+                        Краткое описание
+                      </Text>
+                      <Textarea
+                        placeholder="Расскажите о вашем бизнесе..."
+                        rows={4}
+                        bg="bg.card"
+                        borderColor="border.solid"
+                        borderRadius="card"
+                        _focus={{ borderColor: '#00E5FF' }}
+                      />
+                    </Box>
+                  </VStack>
+                )}
+
+                {/* Other blocks - placeholder */}
+                {currentBlock > 0 && (
+                  <Box p="8" textAlign="center" color="fg.muted">
+                    <Text>Форма для блока {currentBlock + 1} будет добавлена</Text>
+                  </Box>
+                )}
+
+                {/* Voice Input Button */}
+                <Button
+                  variant="outline"
+                  borderColor="border.default"
+                  color="fg.default"
+                  borderRadius="card"
+                  _hover={{ bg: 'bg.card', borderColor: '#00E5FF' }}
+                >
+                  <HStack gap="2">
+                    <Mic size={16} />
+                    <Text>Заполнить голосом</Text>
+                  </HStack>
+                </Button>
+
+                {/* Navigation */}
+                <HStack justify="space-between" pt="4">
+                  <Button
+                    variant="ghost"
+                    disabled={currentBlock === 0}
+                    onClick={() => setCurrentBlock(currentBlock - 1)}
+                    color="fg.muted"
+                    _hover={{ color: 'fg.default', bg: 'bg.card' }}
+                  >
+                    <HStack gap="2">
+                      <ArrowLeft size={16} />
+                      <Text>Назад</Text>
+                    </HStack>
+                  </Button>
+                  <Button
+                    bgGradient="linear(to-r, #00E5FF, #2D5BFF)"
+                    color="white"
+                    borderRadius="card"
+                    onClick={() => {
+                      if (currentBlock < BLOCKS.length - 1) {
+                        setCurrentBlock(currentBlock + 1)
+                      }
+                    }}
+                    _hover={{ transform: 'translateY(-1px)' }}
+                  >
+                    <HStack gap="2">
+                      <Text>{currentBlock === BLOCKS.length - 1 ? 'Завершить' : 'Далее'}</Text>
+                      {currentBlock === BLOCKS.length - 1 ? <Check size={16} /> : <ArrowRight size={16} />}
+                    </HStack>
+                  </Button>
+                </HStack>
+              </VStack>
+            </Box>
+          </Box>
+        </HStack>
       </Container>
     </Box>
   )

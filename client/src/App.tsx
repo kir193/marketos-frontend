@@ -8,6 +8,7 @@ function App() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/dashboard" component={Dashboard} />
+      <Route path="/briefing" component={Briefing} />
       <Route path="/briefing/new" component={Briefing} />
       <Route path="/briefing/:id" component={Briefing} />
       <Route>404 Not Found</Route>
