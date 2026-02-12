@@ -1,203 +1,152 @@
-import {
-  Box,
-  Button,
-  Container,
-  Flex,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  SimpleGrid,
-  Icon,
-} from "@chakra-ui/react"
-import { ArrowRight, Sparkles, Zap, Target, TrendingUp } from "lucide-react"
-import { Link } from "wouter"
+// GLOBAL DESIGN RULES: Dark premium #05060A, Inter, glassmorphism cards, cyan→blue→violet gradients
+
+import { Box, Button, Container, Heading, Text, VStack, HStack, SimpleGrid } from '@chakra-ui/react'
+import { Link } from 'wouter'
+import { Sparkles, Target, Zap } from 'lucide-react'
 
 export default function Home() {
-  const features = [
-    {
-      icon: Sparkles,
-      title: "AI-брифинг",
-      description: "Интеллектуальный сбор информации о бизнесе с поддержкой голосового ввода"
-    },
-    {
-      icon: Zap,
-      title: "Автогенерация контента",
-      description: "Создание контент-планов, постов и визуалов на основе брифинга"
-    },
-    {
-      icon: Target,
-      title: "Мультиканальность",
-      description: "Публикация в 7+ социальных сетей одновременно"
-    },
-    {
-      icon: TrendingUp,
-      title: "Аналитика",
-      description: "Отслеживание эффективности контента и охвата аудитории"
-    }
-  ]
-
   return (
     <Box minH="100vh" bg="bg.canvas" color="fg.default">
-      {/* Hero */}
-      <Box position="relative" overflow="hidden">
-        {/* Gradient background */}
-        <Box
-          position="absolute"
-          inset="0"
-          bgGradient="to-br"
-          gradientFrom="brand.500/20"
-          gradientVia="purple.500/10"
-          gradientTo="transparent"
-        />
-        
-        <Container maxW="7xl" position="relative" py={{ base: 24, md: 32 }}>
-          <VStack gap={6} maxW="3xl" mx="auto" textAlign="center">
-            <HStack
-              gap={2}
-              px={4}
-              py={2}
-              borderRadius="full"
-              bg="brand.500/10"
-              borderWidth="1px"
-              borderColor="brand.500/20"
-            >
-              <Icon color="brand.400">
-                <Sparkles size={16} />
-              </Icon>
-              <Text fontSize="sm" fontWeight="medium" color="brand.400">
-                AI-powered Marketing Platform
-              </Text>
+      {/* Hero Section */}
+      <Container maxW="7xl" pt="120px" pb="80px">
+        <VStack gap="8" textAlign="center">
+          <Box
+            px="6"
+            py="2"
+            bg="bg.glass"
+            borderWidth="1px"
+            borderColor="border.default"
+            borderRadius="full"
+            backdropFilter="blur(20px)"
+          >
+            <HStack gap="2">
+              <Sparkles size={16} color="#00E5FF" />
+              <Text fontSize="caption" color="fg.muted">AI-powered Marketing Platform</Text>
             </HStack>
-            
-            <Heading
-              fontSize={{ base: "5xl", md: "6xl", lg: "7xl" }}
-              fontWeight="bold"
-              fontFamily="heading"
-              bgGradient="to-r"
-              gradientFrom="fg.default"
-              gradientVia="fg.default"
-              gradientTo="fg.muted"
-              bgClip="text"
-            >
-              Marketos
-            </Heading>
-            
-            <Text fontSize={{ base: "xl", md: "2xl" }} color="fg.muted" lineHeight="relaxed">
-              Автоматизируйте маркетинг с помощью AI.
-              <br />
-              От брифинга до публикации — всё в одной платформе.
-            </Text>
-            
-            <HStack gap={4} flexDir={{ base: "column", sm: "row" }}>
-              <Link href="/dashboard">
-                <Button size="lg" colorPalette="brand" fontSize="lg" px={8}>
-                  Начать работу
-                  <Icon ml={2}>
-                    <ArrowRight size={20} />
-                  </Icon>
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" fontSize="lg" px={8}>
-                Узнать больше
-              </Button>
-            </HStack>
-          </VStack>
-        </Container>
-      </Box>
+          </Box>
 
-      {/* Features */}
-      <Box py={20} bg="bg.surface/30">
-        <Container maxW="7xl">
-          <VStack gap={12} mb={12} textAlign="center">
-            <Heading
-              fontSize={{ base: "3xl", md: "4xl" }}
-              fontWeight="bold"
-              fontFamily="heading"
+          <Heading
+            fontSize="h1"
+            fontWeight="bold"
+            lineHeight="1.1"
+            bgGradient="linear(to-r, #00E5FF, #2D5BFF, #8A3FFC)"
+            bgClip="text"
+          >
+            Marketos
+          </Heading>
+
+          <Text fontSize="h3" color="fg.muted" maxW="2xl">
+            Автоматизируйте маркетинг с помощью AI.
+            <br />
+            От брифинга до публикации — всё в одной платформе.
+          </Text>
+
+          <HStack gap="4" mt="8">
+            <Link href="/dashboard">
+              <Button
+                size="lg"
+                px="8"
+                py="6"
+                fontSize="body"
+                bgGradient="linear(to-r, #00E5FF, #2D5BFF)"
+                color="white"
+                borderRadius="card"
+                _hover={{ transform: 'translateY(-2px)', shadow: '0 20px 40px rgba(0, 229, 255, 0.3)' }}
+                transition="all 0.3s"
+              >
+                Начать работу →
+              </Button>
+            </Link>
+            <Button
+              size="lg"
+              px="8"
+              py="6"
+              fontSize="body"
+              bg="bg.glass"
+              color="fg.default"
+              borderWidth="1px"
+              borderColor="border.default"
+              borderRadius="card"
+              backdropFilter="blur(20px)"
+              _hover={{ bg: 'rgba(255, 255, 255, 0.05)' }}
             >
-              Всё что нужно для маркетинга
-            </Heading>
-            <Text fontSize="lg" color="fg.muted">
-              Комплексное решение для управления контентом и публикациями
-            </Text>
-          </VStack>
-          
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={6}>
-            {features.map((feature, index) => (
+              Узнать больше
+            </Button>
+          </HStack>
+        </VStack>
+      </Container>
+
+      {/* Features Section */}
+      <Container maxW="7xl" py="80px">
+        <VStack gap="16">
+          <Heading fontSize="h2" fontWeight="semibold" textAlign="center">
+            Всё что нужно для маркетинга
+          </Heading>
+
+          <SimpleGrid columns={{ base: 1, md: 3 }} gap="6" w="full">
+            {[
+              {
+                icon: Target,
+                title: 'Умный брифинг',
+                description: 'AI анализирует ваш бизнес и создаёт персонализированную стратегию контента',
+                gradient: 'linear(to-br, #00E5FF, #2D5BFF)',
+              },
+              {
+                icon: Sparkles,
+                title: 'Генерация контента',
+                description: 'Автоматическое создание постов, изображений и видео для всех платформ',
+                gradient: 'linear(to-br, #2D5BFF, #8A3FFC)',
+              },
+              {
+                icon: Zap,
+                title: 'Мультиканальная публикация',
+                description: 'Публикуйте контент одновременно в 7+ социальных сетей',
+                gradient: 'linear(to-br, #8A3FFC, #FF4FD8)',
+              },
+            ].map((feature, i) => (
               <Box
-                key={index}
-                bg="bg.surface/50"
-                backdropFilter="blur(8px)"
+                key={i}
+                p="8"
+                bg="bg.glass"
                 borderWidth="1px"
                 borderColor="border.default"
-                borderRadius="lg"
-                p={6}
-                transition="all 0.2s"
-                _hover={{ borderColor: "brand.500/50", transform: "translateY(-2px)" }}
+                borderRadius="cardLg"
+                backdropFilter="blur(30px)"
+                position="relative"
+                overflow="hidden"
+                _hover={{ borderColor: 'border.solid', transform: 'translateY(-4px)' }}
+                transition="all 0.3s"
               >
-                <VStack align="start" gap={4}>
-                  <Flex
-                    w={12}
-                    h={12}
-                    borderRadius="lg"
-                    bg="brand.500/10"
-                    align="center"
-                    justify="center"
+                <Box
+                  position="absolute"
+                  top="0"
+                  left="0"
+                  w="full"
+                  h="2px"
+                  bgGradient={feature.gradient}
+                />
+                <VStack align="start" gap="4">
+                  <Box
+                    p="3"
+                    bg="bg.card"
+                    borderRadius="card"
+                    borderWidth="1px"
+                    borderColor="border.solid"
                   >
-                    <Icon color="brand.400">
-                      <feature.icon size={24} />
-                    </Icon>
-                  </Flex>
-                  <Heading fontSize="lg" fontWeight="semibold">
+                    <feature.icon size={24} color="#00E5FF" />
+                  </Box>
+                  <Heading fontSize="h3" fontWeight="semibold">
                     {feature.title}
                   </Heading>
-                  <Text fontSize="sm" color="fg.muted" lineHeight="relaxed">
+                  <Text fontSize="body" color="fg.muted" lineHeight="1.6">
                     {feature.description}
                   </Text>
                 </VStack>
               </Box>
             ))}
           </SimpleGrid>
-        </Container>
-      </Box>
-
-      {/* CTA */}
-      <Box py={20}>
-        <Container maxW="7xl">
-          <Box
-            bgGradient="to-r"
-            gradientFrom="brand.500/10"
-            gradientVia="purple.500/10"
-            gradientTo="brand.500/10"
-            borderWidth="1px"
-            borderColor="brand.500/20"
-            borderRadius="lg"
-            p={12}
-            textAlign="center"
-          >
-            <VStack gap={8}>
-              <Heading
-                fontSize={{ base: "3xl", md: "4xl" }}
-                fontWeight="bold"
-                fontFamily="heading"
-              >
-                Готовы начать?
-              </Heading>
-              <Text fontSize="lg" color="fg.muted" maxW="2xl" mx="auto">
-                Создайте свой первый проект и убедитесь, как AI может трансформировать ваш маркетинг
-              </Text>
-              <Link href="/dashboard">
-                <Button size="lg" colorPalette="brand" fontSize="lg" px={8}>
-                  Создать проект
-                  <Icon ml={2}>
-                    <ArrowRight size={20} />
-                  </Icon>
-                </Button>
-              </Link>
-            </VStack>
-          </Box>
-        </Container>
-      </Box>
+        </VStack>
+      </Container>
     </Box>
   )
 }

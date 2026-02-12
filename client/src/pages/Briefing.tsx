@@ -12,7 +12,7 @@ import {
   Icon,
   createToaster,
 } from "@chakra-ui/react"
-import { Toaster } from "@/components/ui/toaster"
+import { Toaster } from "@chakra-ui/react"
 import { ArrowLeft, ArrowRight, Check, Mic } from "lucide-react"
 import { useState, useEffect } from "react"
 import { Link, useParams } from "wouter"

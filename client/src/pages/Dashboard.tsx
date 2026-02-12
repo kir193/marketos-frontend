@@ -1,34 +1,15 @@
-import {
-  Box,
-  Button,
-  Container,
-  Flex,
-  Heading,
-  Text,
-  VStack,
-  HStack,
-  SimpleGrid,
-  Icon,
-} from "@chakra-ui/react"
-import { Plus, Briefcase, TrendingUp, FileText, Share2 } from "lucide-react"
-import { Link } from "wouter"
+// GLOBAL DESIGN RULES: Dark premium #05060A, Inter, glassmorphism cards, cyan→blue→violet gradients
+
+import { Box, Button, Container, Heading, Text, VStack, HStack, SimpleGrid } from '@chakra-ui/react'
+import { Link } from 'wouter'
+import { TrendingUp, Users, FileText, Zap } from 'lucide-react'
 
 export default function Dashboard() {
-  const projects = [
-    {
-      id: 1,
-      name: "SupaBots — Ортопедические подушки",
-      progress: 85,
-      status: "active",
-      lastUpdated: "2 часа назад"
-    }
-  ]
-
   const stats = [
-    { label: "Проектов", value: "1", icon: Briefcase, trend: "+0%" },
-    { label: "Артефактов", value: "12", icon: FileText, trend: "+25%" },
-    { label: "Публикаций", value: "48", icon: Share2, trend: "+12%" },
-    { label: "Охват", value: "24.5K", icon: TrendingUp, trend: "+18%" }
+    { label: 'Активные проекты', value: '3', change: '+12%', icon: FileText, color: '#00E5FF' },
+    { label: 'Публикаций', value: '127', change: '+23%', icon: Zap, color: '#2D5BFF' },
+    { label: 'Охват', value: '45.2K', change: '+18%', icon: Users, color: '#8A3FFC' },
+    { label: 'Конверсия', value: '3.8%', change: '+0.4%', icon: TrendingUp, color: '#FF4FD8' },
   ]
 
   return (
@@ -37,149 +18,130 @@ export default function Dashboard() {
       <Box
         borderBottomWidth="1px"
         borderColor="border.default"
-        bg="bg.surface/50"
-        backdropFilter="blur(8px)"
+        backdropFilter="blur(20px)"
+        bg="rgba(5, 6, 10, 0.8)"
         position="sticky"
-        top={0}
-        zIndex={10}
+        top="0"
+        zIndex="10"
       >
-        <Container maxW="7xl" py={4}>
-          <Flex align="center" justify="space-between">
-            <VStack align="start" gap={0.5}>
-              <Heading
-                fontSize="2xl"
-                fontWeight="bold"
-                bgGradient="to-r"
-                gradientFrom="brand.400"
-                gradientTo="purple.400"
-                bgClip="text"
-                fontFamily="heading"
+        <Container maxW="7xl" py="4">
+          <HStack justify="space-between">
+            <Heading fontSize="h3" fontWeight="semibold">Dashboard</Heading>
+            <Link href="/briefing">
+              <Button
+                bgGradient="linear(to-r, #00E5FF, #2D5BFF)"
+                color="white"
+                borderRadius="card"
+                px="6"
+                _hover={{ transform: 'translateY(-1px)' }}
               >
-                Marketos
-              </Heading>
-              <Text fontSize="sm" color="fg.muted">
-                AI Marketing Platform
-              </Text>
-            </VStack>
-            <Link href="/briefing/new">
-              <Button size="lg" colorPalette="brand">
-                <Icon mr={2}>
-                  <Plus size={16} />
-                </Icon>
                 Новый проект
               </Button>
             </Link>
-          </Flex>
+          </HStack>
         </Container>
       </Box>
 
-      <Container maxW="7xl" py={8}>
-        {/* Stats */}
-        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={4} mb={8}>
-          {stats.map((stat) => (
-            <Box
-              key={stat.label}
-              bg="bg.surface/50"
-              backdropFilter="blur(8px)"
-              borderWidth="1px"
-              borderColor="border.default"
-              borderRadius="lg"
-              p={6}
-            >
-              <Flex align="center" justify="space-between">
-                <VStack align="start" gap={1}>
-                  <Text fontSize="sm" color="fg.muted">
-                    {stat.label}
-                  </Text>
-                  <Text fontSize="3xl" fontWeight="bold">
-                    {stat.value}
-                  </Text>
-                  <Text fontSize="xs" color="green.500">
-                    {stat.trend}
-                  </Text>
-                </VStack>
-                <Flex
-                  w={12}
-                  h={12}
-                  borderRadius="lg"
-                  bg="brand.500/10"
-                  align="center"
-                  justify="center"
-                >
-                  <Icon color="brand.400">
-                    <stat.icon size={24} />
-                  </Icon>
-                </Flex>
-              </Flex>
-            </Box>
-          ))}
-        </SimpleGrid>
-
-        {/* Projects */}
-        <VStack align="stretch" gap={4}>
-          <Flex align="center" justify="space-between" mb={4}>
-            <Heading fontSize="xl" fontWeight="semibold">
-              Мои проекты
-            </Heading>
-          </Flex>
-          
-          {projects.map((project) => (
-            <Box
-              key={project.id}
-              bg="bg.surface/50"
-              backdropFilter="blur(8px)"
-              borderWidth="1px"
-              borderColor="border.default"
-              borderRadius="lg"
-              _hover={{ borderColor: "brand.500/50" }}
-              transition="all 0.2s"
-              cursor="pointer"
-            >
-              <Box p={6} borderBottomWidth="1px" borderColor="border.default">
-                <Flex align="start" justify="space-between">
-                  <VStack align="start" gap={1}>
-                    <Heading fontSize="lg">{project.name}</Heading>
-                    <Text fontSize="sm" color="fg.muted">
-                      Обновлено {project.lastUpdated}
-                    </Text>
-                  </VStack>
-                  <HStack gap={2}>
-                    <Link href={`/briefing/${project.id}`}>
-                      <Button variant="outline" size="sm">
-                        Открыть
-                      </Button>
-                    </Link>
-                  </HStack>
-                </Flex>
-              </Box>
-              <Box p={6}>
-                <VStack align="stretch" gap={2}>
-                  <Flex align="center" justify="space-between" fontSize="sm">
-                    <Text color="fg.muted">Прогресс брифинга</Text>
-                    <Text fontWeight="medium">{project.progress}%</Text>
-                  </Flex>
-                  <Box position="relative">
-                    <Box
-                      w="full"
-                      h={2}
-                      bg="bg.muted"
-                      borderRadius="full"
-                      overflow="hidden"
-                    >
-                      <Box
-                        h="full"
-                        w={`${project.progress}%`}
-                        bgGradient="to-r"
-                        gradientFrom="brand.500"
-                        gradientTo="purple.500"
-                        transition="all 0.3s"
-                      />
+      <Container maxW="7xl" py="12">
+        <VStack gap="8" align="stretch">
+          {/* Stats Grid */}
+          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap="6">
+            {stats.map((stat, i) => (
+              <Box
+                key={i}
+                p="6"
+                bg="bg.glass"
+                borderWidth="1px"
+                borderColor="border.default"
+                borderRadius="cardLg"
+                backdropFilter="blur(30px)"
+                position="relative"
+                overflow="hidden"
+              >
+                <Box
+                  position="absolute"
+                  top="0"
+                  left="0"
+                  w="full"
+                  h="2px"
+                  bg={stat.color}
+                />
+                <VStack align="start" gap="3">
+                  <HStack justify="space-between" w="full">
+                    <Box p="2" bg="bg.card" borderRadius="card" borderWidth="1px" borderColor="border.solid">
+                      <stat.icon size={20} color={stat.color} />
                     </Box>
-                  </Box>
+                    <Text fontSize="caption" color="#00E5FF" fontWeight="medium">
+                      {stat.change}
+                    </Text>
+                  </HStack>
+                  <Text fontSize="caption" color="fg.muted">{stat.label}</Text>
+                  <Heading fontSize="h2" fontWeight="bold">{stat.value}</Heading>
                 </VStack>
               </Box>
-            </Box>
-          ))}
+            ))}
+          </SimpleGrid>
+
+          {/* Project Card */}
+          <Box
+            p="8"
+            bg="bg.glass"
+            borderWidth="1px"
+            borderColor="border.default"
+            borderRadius="cardLg"
+            backdropFilter="blur(30px)"
+          >
+            <VStack align="stretch" gap="6">
+              <HStack justify="space-between">
+                <VStack align="start" gap="2">
+                  <Heading fontSize="h3" fontWeight="semibold">Проект "Eco Store"</Heading>
+                  <Text fontSize="body" color="fg.muted">Онлайн магазин эко-товаров</Text>
+                </VStack>
+                <Link href="/briefing">
+                  <Button
+                    variant="outline"
+                    borderColor="border.default"
+                    color="fg.default"
+                    borderRadius="card"
+                    _hover={{ bg: 'bg.card' }}
+                  >
+                    Открыть
+                  </Button>
+                </Link>
+              </HStack>
+
+              <Box>
+                <HStack justify="space-between" mb="2">
+                  <Text fontSize="caption" color="fg.muted">Прогресс брифинга</Text>
+                  <Text fontSize="caption" fontWeight="medium" color="fg.default">85%</Text>
+                </HStack>
+                <Box position="relative" h="2" bg="bg.card" borderRadius="full" overflow="hidden">
+                  <Box
+                    position="absolute"
+                    top="0"
+                    left="0"
+                    h="full"
+                    w="85%"
+                    bgGradient="linear(to-r, #00E5FF, #2D5BFF, #8A3FFC)"
+                    borderRadius="full"
+                  />
+                </Box>
+              </Box>
+
+              <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
+                {[
+                  { label: 'Брифинг', value: '11/13' },
+                  { label: 'Контент', value: '24 поста' },
+                  { label: 'Публикации', value: '18 шт' },
+                ].map((item, i) => (
+                  <Box key={i} p="4" bg="bg.card" borderRadius="card" borderWidth="1px" borderColor="border.solid">
+                    <Text fontSize="caption" color="fg.muted" mb="1">{item.label}</Text>
+                    <Text fontSize="body" fontWeight="semibold">{item.value}</Text>
+                  </Box>
+                ))}
+              </SimpleGrid>
+            </VStack>
+          </Box>
         </VStack>
       </Container>
     </Box>

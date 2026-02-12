@@ -1,64 +1,73 @@
 import { createSystem, defaultConfig, defineConfig } from "@chakra-ui/react"
 
+// GLOBAL DESIGN RULES
+// Background: #05060A
+// Typography: Inter (geometric sans-serif)
+// Text: primary #FFFFFF, secondary #B7C0D1
+// Accents: cyan #00E5FF, blue #2D5BFF, violet #8A3FFC, magenta #FF4FD8
+// Cards: glassmorphism with blur, thin stroke
+// Style: calm, enterprise, high-tech, minimal, premium
+
 const config = defineConfig({
   theme: {
     tokens: {
       colors: {
         brand: {
-          50: { value: "#f0e7ff" },
-          100: { value: "#d4bfff" },
-          200: { value: "#b794ff" },
-          300: { value: "#9a69ff" },
-          400: { value: "#7d3eff" },
-          500: { value: "#6420aa" },
-          600: { value: "#4e19b4" },
-          700: { value: "#381282" },
-          800: { value: "#220b50" },
-          900: { value: "#0c041e" },
+          bg: { value: "#05060A" },
+          card: { value: "#0B0E17" },
+          glass: { value: "rgba(255, 255, 255, 0.03)" },
+          stroke: { value: "rgba(255, 255, 255, 0.08)" },
+          strokeSolid: { value: "rgba(255, 255, 255, 0.06)" },
+          text: {
+            primary: { value: "#FFFFFF" },
+            secondary: { value: "#B7C0D1" },
+          },
+          accent: {
+            cyan: { value: "#00E5FF" },
+            blue: { value: "#2D5BFF" },
+            violet: { value: "#8A3FFC" },
+            magenta: { value: "#FF4FD8" },
+          },
         },
       },
       fonts: {
-        heading: { value: "'Space Grotesk', sans-serif" },
-        body: { value: "'Inter', sans-serif" },
+        heading: { value: "Inter, system-ui, sans-serif" },
+        body: { value: "Inter, system-ui, sans-serif" },
+      },
+      fontSizes: {
+        h1: { value: "72px" },
+        h2: { value: "48px" },
+        h3: { value: "28px" },
+        body: { value: "18px" },
+        caption: { value: "14px" },
+      },
+      radii: {
+        card: { value: "20px" },
+        cardLg: { value: "24px" },
       },
     },
     semanticTokens: {
       colors: {
         "bg.canvas": {
-          value: {
-            base: "#ffffff",
-            _dark: "#0f0f1a",
-          },
+          value: { base: "#05060A", _dark: "#05060A" },
         },
-        "bg.surface": {
-          value: {
-            base: "#f7f7f7",
-            _dark: "#1a1a2e",
-          },
+        "bg.card": {
+          value: { base: "#0B0E17", _dark: "#0B0E17" },
         },
-        "bg.muted": {
-          value: {
-            base: "#e7e7e7",
-            _dark: "#252541",
-          },
+        "bg.glass": {
+          value: { base: "rgba(255, 255, 255, 0.03)", _dark: "rgba(255, 255, 255, 0.03)" },
         },
         "fg.default": {
-          value: {
-            base: "#1a1a1a",
-            _dark: "#e7e7e7",
-          },
+          value: { base: "#FFFFFF", _dark: "#FFFFFF" },
         },
         "fg.muted": {
-          value: {
-            base: "#666666",
-            _dark: "#a0a0a0",
-          },
+          value: { base: "#B7C0D1", _dark: "#B7C0D1" },
         },
         "border.default": {
-          value: {
-            base: "#e0e0e0",
-            _dark: "#2a2a3e",
-          },
+          value: { base: "rgba(255, 255, 255, 0.08)", _dark: "rgba(255, 255, 255, 0.08)" },
+        },
+        "border.solid": {
+          value: { base: "rgba(255, 255, 255, 0.06)", _dark: "rgba(255, 255, 255, 0.06)" },
         },
       },
     },
