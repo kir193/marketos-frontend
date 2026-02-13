@@ -42,6 +42,15 @@ export const briefingApi = {
     });
     return response.data;
   },
+
+  // AI-автозаполнение блока
+  aiFillBlock: async (businessId: number, blockNumber: number, context: string) => {
+    const response = await api.post(`/briefing/${businessId}/ai-fill`, {
+      blockNumber,
+      context,
+    });
+    return response.data;
+  },
 };
 
 // Business API

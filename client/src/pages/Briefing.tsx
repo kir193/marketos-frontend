@@ -18,7 +18,7 @@ import {
   Block11Form,
   Block12Form
 } from '@/components/BriefingBlocks'
-import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft } from "lucide-react"
+import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft, Sparkles } from "lucide-react"
 import { useLocation } from "wouter"
 import { briefingApi } from "@/lib/api"
 
@@ -48,6 +48,9 @@ export default function Briefing() {
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<BriefingData>({})
   const [loading, setLoading] = useState(false)
+  const [aiLoading, setAiLoading] = useState(false)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiContext, setAiContext] = useState("")
   const businessId = 1 // TODO: получать из контекста/роута
 
   useEffect(() => {
@@ -83,6 +86,35 @@ export default function Briefing() {
         [field]: value
       }
     }))
+  }
+
+  const handleAiFill = async () => {
+    setAiLoading(true)
+    try {
+      const response = await briefingApi.aiFillBlock(businessId, currentBlock, aiContext)
+      
+      // Парсим JSON из ответа
+      const content = response.content
+      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+      
+      if (jsonMatch) {
+        const aiData = JSON.parse(jsonMatch[1])
+        setFormData(prev => ({
+          ...prev,
+          [currentBlock]: aiData
+        }))
+        toast.success("Блок заполнен с помощью AI!")
+        setShowAiModal(false)
+        setAiContext("")
+      } else {
+        toast.error("Не удалось распарсить ответ AI")
+      }
+    } catch (error) {
+      console.error("AI fill error:", error)
+      toast.error("Ошибка AI-заполнения")
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const currentData = formData[currentBlock] || {}
@@ -153,10 +185,21 @@ export default function Briefing() {
                 <h2 className="text-xl font-semibold" style={{ color: '#FFFFFF' }}>
                   {BLOCKS[currentBlock].title}
                 </h2>
-                <Button variant="outline" size="sm" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <Mic className="w-4 h-4 mr-2" />
-                  Заполнить голосом
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowAiModal(true)}
+                    className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Заполнить с AI
+                  </Button>
+                  <Button variant="outline" size="sm" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <Mic className="w-4 h-4 mr-2" />
+                    Заполнить голосом
+                  </Button>
+                </div>
               </div>
 
               {/* Формы блоков */}
@@ -203,6 +246,48 @@ export default function Briefing() {
           </div>
         </div>
       </div>
+
+      {/* AI Modal */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <div className="w-full max-w-md p-6 rounded-2xl" style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>
+              AI-автозаполнение
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Опишите ваш бизнес в нескольких словах, и AI заполнит блок за вас.
+            </p>
+            <Textarea
+              value={aiContext}
+              onChange={(e) => setAiContext(e.target.value)}
+              placeholder="Например: Я маркетолог-фрилансер, помогаю малому бизнесу с продвижением в соцсетях"
+              rows={4}
+              className="mb-4"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAiModal(false)
+                  setAiContext("")
+                }}
+                className="flex-1"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleAiFill}
+                disabled={aiLoading || !aiContext.trim()}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500"
+              >
+                {aiLoading ? "Заполняем..." : "Заполнить"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
