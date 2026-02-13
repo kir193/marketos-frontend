@@ -51,7 +51,9 @@ export default function Briefing() {
   const [aiLoading, setAiLoading] = useState(false)
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiContext, setAiContext] = useState("")
-  const businessId = 1 // TODO: получать из контекста/роута
+  // TODO: В production получать businessId из URL параметра или контекста пользователя
+  // Например: const { id } = useParams() или из AuthContext
+  const businessId = 1
 
   useEffect(() => {
     loadBriefing()
@@ -89,16 +91,29 @@ export default function Briefing() {
   }
 
   const handleAiFill = async () => {
+    if (!aiContext.trim()) {
+      toast.error("Введите описание бизнеса")
+      return
+    }
+
     setAiLoading(true)
     try {
       const response = await briefingApi.aiFillBlock(businessId, currentBlock, aiContext)
       
-      // Парсим JSON из ответа
+      // Парсим JSON из ответа с fallback
       const content = response.content
-      const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+      let aiData: any = null
       
-      if (jsonMatch) {
-        const aiData = JSON.parse(jsonMatch[1])
+      try {
+        // Попытка 1: Парсинг markdown code block
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+        if (jsonMatch) {
+          aiData = JSON.parse(jsonMatch[1])
+        } else {
+          // Попытка 2: Парсинг всего content как JSON
+          aiData = JSON.parse(content)
+        }
+        
         setFormData(prev => ({
           ...prev,
           [currentBlock]: aiData
@@ -106,7 +121,8 @@ export default function Briefing() {
         toast.success("Блок заполнен с помощью AI!")
         setShowAiModal(false)
         setAiContext("")
-      } else {
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError)
         toast.error("Не удалось распарсить ответ AI")
       }
     } catch (error) {
