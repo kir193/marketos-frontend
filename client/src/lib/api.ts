@@ -1,7 +1,14 @@
 import axios from 'axios';
 
-// Backend API URL - можно вынести в .env
-const API_BASE_URL = 'http://localhost:8080/api';
+// Backend API URL - используем относительный путь для Vite proxy
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// Types
+interface AIFillResponse {
+  status: string;
+  blockNumber: number;
+  content: string;
+}
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -39,6 +46,15 @@ export const briefingApi = {
       businessId,
       blockNumber,
       fileUrl,
+    });
+    return response.data;
+  },
+
+  // AI-автозаполнение блока
+  aiFillBlock: async (businessId: number, blockNumber: number, context: string): Promise<AIFillResponse> => {
+    const response = await api.post<AIFillResponse>(`/briefing/${businessId}/ai-fill`, {
+      blockNumber,
+      context,
     });
     return response.data;
   },
