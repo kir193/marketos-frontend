@@ -1,149 +1,112 @@
-// GLOBAL DESIGN RULES: Dark premium #05060A, Inter, glassmorphism cards, cyan→blue→violet gradients
-
-import { Box, Button, Container, Heading, Text, VStack, HStack, SimpleGrid } from '@chakra-ui/react'
-import { Link } from 'wouter'
-import { TrendingUp, Users, FileText, Zap } from 'lucide-react'
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Plus, Briefcase, TrendingUp, FileText, Share2 } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Dashboard() {
+  const projects = [
+    {
+      id: 1,
+      name: "SupaBots — Ортопедические подушки",
+      progress: 85,
+      status: "active",
+      lastUpdated: "2 часа назад"
+    }
+  ];
+
   const stats = [
-    { label: 'Активные проекты', value: '3', change: '+12%', icon: FileText, color: '#00E5FF' },
-    { label: 'Публикаций', value: '127', change: '+23%', icon: Zap, color: '#2D5BFF' },
-    { label: 'Охват', value: '45.2K', change: '+18%', icon: Users, color: '#8A3FFC' },
-    { label: 'Конверсия', value: '3.8%', change: '+0.4%', icon: TrendingUp, color: '#FF4FD8' },
-  ]
+    { label: "Проектов", value: "1", icon: Briefcase, trend: "+0%" },
+    { label: "Артефактов", value: "12", icon: FileText, trend: "+25%" },
+    { label: "Публикаций", value: "48", icon: Share2, trend: "+12%" },
+    { label: "Охват", value: "24.5K", icon: TrendingUp, trend: "+18%" }
+  ];
 
   return (
-    <Box minH="100vh" bg="bg.canvas" color="fg.default">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <Box
-        borderBottomWidth="1px"
-        borderColor="border.default"
-        backdropFilter="blur(20px)"
-        bg="rgba(5, 6, 10, 0.8)"
-        position="sticky"
-        top="0"
-        zIndex="10"
-      >
-        <Container maxW="7xl" py="4">
-          <HStack justify="space-between">
-            <Heading fontSize="h3" fontWeight="semibold">Dashboard</Heading>
-            <Link href="/briefing">
-              <Button
-                bgGradient="linear(to-r, #00E5FF, #2D5BFF)"
-                color="white"
-                borderRadius="card"
-                px="6"
-                _hover={{ transform: 'translateY(-1px)' }}
-              >
+      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+                Marketos
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">AI Marketing Platform</p>
+            </div>
+            <Link href="/briefing/new">
+              <Button size="lg" className="gap-2">
+                <Plus className="w-4 h-4" />
                 Новый проект
               </Button>
             </Link>
-          </HStack>
-        </Container>
-      </Box>
+          </div>
+        </div>
+      </header>
 
-      <Container maxW="7xl" py="12">
-        <VStack gap="8" align="stretch">
-          {/* Stats Grid */}
-          <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap="6">
-            {stats.map((stat, i) => (
-              <Box
-                key={i}
-                p="6"
-                bg="bg.glass"
-                borderWidth="1px"
-                borderColor="border.default"
-                borderRadius="cardLg"
-                backdropFilter="blur(30px)"
-                position="relative"
-                overflow="hidden"
-              >
-                <Box
-                  position="absolute"
-                  top="0"
-                  left="0"
-                  w="full"
-                  h="2px"
-                  bg={stat.color}
-                />
-                <VStack align="start" gap="3">
-                  <HStack justify="space-between" w="full">
-                    <Box p="2" bg="bg.card" borderRadius="card" borderWidth="1px" borderColor="border.solid">
-                      <stat.icon size={20} color={stat.color} />
-                    </Box>
-                    <Text fontSize="caption" color="#00E5FF" fontWeight="medium">
-                      {stat.change}
-                    </Text>
-                  </HStack>
-                  <Text fontSize="caption" color="fg.muted">{stat.label}</Text>
-                  <Heading fontSize="h2" fontWeight="bold">{stat.value}</Heading>
-                </VStack>
-              </Box>
+      <main className="container py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat) => (
+            <Card key={stat.label} className="bg-card/50 backdrop-blur-sm border-border/40">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-3xl font-bold mt-1">{stat.value}</p>
+                    <p className="text-xs text-green-500 mt-1">{stat.trend}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <stat.icon className="w-6 h-6 text-primary" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Projects */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold">Мои проекты</h2>
+          </div>
+          
+          <div className="grid gap-4">
+            {projects.map((project) => (
+              <Card key={project.id} className="bg-card/50 backdrop-blur-sm border-border/40 hover:border-primary/50 transition-all cursor-pointer">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg">{project.name}</CardTitle>
+                      <CardDescription className="mt-1">
+                        Обновлено {project.lastUpdated}
+                      </CardDescription>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link href={`/briefing/${project.id}`}>
+                        <Button variant="outline" size="sm">Открыть</Button>
+                      </Link>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Прогресс брифинга</span>
+                      <span className="font-medium">{project.progress}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-primary to-purple-500 h-2 rounded-full transition-all"
+                        style={{ width: `${project.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </SimpleGrid>
-
-          {/* Project Card */}
-          <Box
-            p="8"
-            bg="bg.glass"
-            borderWidth="1px"
-            borderColor="border.default"
-            borderRadius="cardLg"
-            backdropFilter="blur(30px)"
-          >
-            <VStack align="stretch" gap="6">
-              <HStack justify="space-between">
-                <VStack align="start" gap="2">
-                  <Heading fontSize="h3" fontWeight="semibold">Проект "Eco Store"</Heading>
-                  <Text fontSize="body" color="fg.muted">Онлайн магазин эко-товаров</Text>
-                </VStack>
-                <Link href="/briefing">
-                  <Button
-                    variant="outline"
-                    borderColor="border.default"
-                    color="fg.default"
-                    borderRadius="card"
-                    _hover={{ bg: 'bg.card' }}
-                  >
-                    Открыть
-                  </Button>
-                </Link>
-              </HStack>
-
-              <Box>
-                <HStack justify="space-between" mb="2">
-                  <Text fontSize="caption" color="fg.muted">Прогресс брифинга</Text>
-                  <Text fontSize="caption" fontWeight="medium" color="fg.default">85%</Text>
-                </HStack>
-                <Box position="relative" h="2" bg="bg.card" borderRadius="full" overflow="hidden">
-                  <Box
-                    position="absolute"
-                    top="0"
-                    left="0"
-                    h="full"
-                    w="85%"
-                    bgGradient="linear(to-r, #00E5FF, #2D5BFF, #8A3FFC)"
-                    borderRadius="full"
-                  />
-                </Box>
-              </Box>
-
-              <SimpleGrid columns={{ base: 1, md: 3 }} gap="4">
-                {[
-                  { label: 'Брифинг', value: '11/13' },
-                  { label: 'Контент', value: '24 поста' },
-                  { label: 'Публикации', value: '18 шт' },
-                ].map((item, i) => (
-                  <Box key={i} p="4" bg="bg.card" borderRadius="card" borderWidth="1px" borderColor="border.solid">
-                    <Text fontSize="caption" color="fg.muted" mb="1">{item.label}</Text>
-                    <Text fontSize="body" fontWeight="semibold">{item.value}</Text>
-                  </Box>
-                ))}
-              </SimpleGrid>
-            </VStack>
-          </Box>
-        </VStack>
-      </Container>
-    </Box>
-  )
+          </div>
+        </div>
+      </main>
+    </div>
+  );
 }
