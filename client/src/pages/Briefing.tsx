@@ -1,232 +1,491 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, ArrowRight, Check, Mic } from "lucide-react";
-import { useState, useEffect } from "react";
-import { Link, useParams } from "wouter";
-import { briefingApi } from "@/lib/api";
-import { toast } from "sonner";
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Label } from "@/components/ui/label"
+import { Progress } from "@/components/ui/progress"
+import { Checkbox } from "@/components/ui/checkbox"
+import { toast } from "sonner"
+import {
+  Block3Form,
+  Block4Form,
+  Block5Form,
+  Block6Form,
+  Block7Form,
+  Block8Form,
+  Block9Form,
+  Block10Form,
+  Block11Form,
+  Block12Form
+} from '@/components/BriefingBlocks'
+import { Mic, ChevronLeft, ChevronRight, Save } from "lucide-react"
+import { briefingApi } from "@/lib/api"
+
+// Типы данных
+interface BriefingData {
+  [key: string]: any
+}
 
 const BLOCKS = [
-  { id: 0, title: "Базовая информация", description: "Название, сфера, сайт" },
-  { id: 1, title: "Суть бизнеса", description: "Персона и позиционирование" },
-  { id: 2, title: "Аудитория", description: "Целевая аудитория" },
-  { id: 3, title: "Продукты", description: "Продуктовая линейка" },
-  { id: 4, title: "Воронка продаж", description: "Путь клиента" },
-  { id: 5, title: "Площадки и каналы", description: "Социальные сети" },
-  { id: 6, title: "SEO и GEO", description: "Поисковая оптимизация" },
-  { id: 7, title: "Голос бренда", description: "Тон коммуникации" },
-  { id: 8, title: "Визуальная идентичность", description: "Фирменный стиль" },
-  { id: 9, title: "Источники данных", description: "Материалы для контента" },
-  { id: 10, title: "Интеграции", description: "Подключения и API" },
-  { id: 11, title: "Настройки публикации", description: "Автопостинг" },
-  { id: 12, title: "NDA и конфиденциальность", description: "Юридические данные" }
-];
+  { id: 0, title: "Тип бизнеса" },
+  { id: 1, title: "Суть бизнеса" },
+  { id: 2, title: "Аудитория" },
+  { id: 3, title: "Продукты и деньги" },
+  { id: 4, title: "Воронка продаж" },
+  { id: 5, title: "Каналы и площадки" },
+  { id: 6, title: "SEO + GEO" },
+  { id: 7, title: "Конкуренты и тренды" },
+  { id: 8, title: "Доказательства" },
+  { id: 9, title: "Контент-модель" },
+  { id: 10, title: "Визуал и дизайн" },
+  { id: 11, title: "Интеграции" },
+  { id: 12, title: "Реквизиты" },
+]
 
 export default function Briefing() {
-  const params = useParams();
-  const businessId = params.id || "new";
-  const [currentBlock, setCurrentBlock] = useState(0);
-  const [formData, setFormData] = useState<Record<string, any>>({});
+  const [currentBlock, setCurrentBlock] = useState(0)
+  const [formData, setFormData] = useState<BriefingData>({})
+  const [loading, setLoading] = useState(false)
+  const businessId = 1 // TODO: получать из контекста/роута
 
-  const progress = ((currentBlock + 1) / BLOCKS.length) * 100;
-
-  const handleNext = async () => {
-    // Автосохранение перед переходом
-    await handleSave();
-    if (currentBlock < BLOCKS.length - 1) {
-      setCurrentBlock(currentBlock + 1);
-    }
-  };
-
-  const handlePrev = () => {
-    if (currentBlock > 0) {
-      setCurrentBlock(currentBlock - 1);
-    }
-  };
-
-  const handleSave = async () => {
-    try {
-      const businessIdNum = businessId === "new" ? 1 : parseInt(businessId);
-      await briefingApi.saveBlock(businessIdNum, currentBlock, formData);
-      toast.success("Блок сохранен");
-    } catch (error) {
-      console.error("Error saving block:", error);
-      toast.error("Ошибка при сохранении");
-    }
-  };
-
-  // Загрузка существующего брифинга
   useEffect(() => {
-    if (businessId !== "new") {
-      const loadBriefing = async () => {
-        try {
-          const data = await briefingApi.getBriefing(parseInt(businessId));
-          if (data && data.length > 0) {
-            // Преобразуем массив блоков в объект formData
-            const loadedData: Record<string, any> = {};
-            data.forEach((block: any) => {
-              Object.assign(loadedData, block.data);
-            });
-            setFormData(loadedData);
-          }
-        } catch (error) {
-          console.error("Error loading briefing:", error);
-        }
-      };
-      loadBriefing();
+    loadBriefing()
+  }, [])
+
+  const loadBriefing = async () => {
+    try {
+      const data = await briefingApi.getBriefing(businessId)
+      setFormData(data)
+    } catch (error) {
+      console.error("Failed to load briefing:", error)
     }
-  }, [businessId]);
+  }
+
+  const saveBlock = async () => {
+    setLoading(true)
+    try {
+      await briefingApi.saveBlock(businessId, currentBlock, formData[currentBlock] || {})
+      toast.success("Блок сохранен!")
+    } catch (error) {
+      toast.error("Ошибка сохранения")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const updateField = (field: string, value: any) => {
+    setFormData(prev => ({
+      ...prev,
+      [currentBlock]: {
+        ...prev[currentBlock],
+        [field]: value
+      }
+    }))
+  }
+
+  const currentData = formData[currentBlock] || {}
+  const progress = ((currentBlock + 1) / BLOCKS.length) * 100
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen" style={{ background: '#05060A' }}>
       {/* Header */}
-      <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+      <div className="border-b" style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#0B0E17' }}>
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Button variant="ghost" size="icon">
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl font-semibold">Брифинг проекта</h1>
-                <p className="text-sm text-muted-foreground">
-                  Шаг {currentBlock + 1} из {BLOCKS.length}
-                </p>
-              </div>
-            </div>
-            <Button onClick={handleSave} variant="outline">
+            <h1 className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>Брифинг</h1>
+            <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
+              <Save className="w-4 h-4 mr-2" />
               Сохранить
             </Button>
           </div>
-          <div className="mt-4">
-            <Progress value={progress} className="h-2" />
-          </div>
+          <Progress value={progress} className="mt-4" />
         </div>
-      </header>
+      </div>
 
-      <main className="container py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Stepper */}
-          <div className="mb-8">
-            <div className="flex items-center gap-2 overflow-x-auto pb-4">
-              {BLOCKS.map((block, index) => (
-                <button
-                  key={block.id}
-                  onClick={() => setCurrentBlock(index)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all whitespace-nowrap ${
-                    index === currentBlock
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : index < currentBlock
-                      ? "bg-primary/10 border-primary/30 text-primary"
-                      : "bg-card border-border/40 text-muted-foreground hover:border-border"
-                  }`}
-                >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
-                    index < currentBlock ? "bg-primary text-primary-foreground" : ""
-                  }`}>
-                    {index < currentBlock ? <Check className="w-4 h-4" /> : index + 1}
-                  </div>
-                  <span className="text-sm font-medium">{block.title}</span>
-                </button>
-              ))}
+      <div className="container py-8">
+        <div className="grid grid-cols-12 gap-8">
+          {/* Sidebar */}
+          <div className="col-span-3">
+            <div className="p-4 rounded-2xl sticky top-4" style={{ 
+              background: '#0B0E17',
+              border: '1px solid rgba(255,255,255,0.06)'
+            }}>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: '#FFFFFF' }}>Блоки</h3>
+              <div className="space-y-1">
+                {BLOCKS.map((block) => (
+                  <button
+                    key={block.id}
+                    onClick={() => setCurrentBlock(block.id)}
+                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
+                      currentBlock === block.id
+                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                        : "hover:bg-white/5"
+                    }`}
+                    style={{ color: currentBlock === block.id ? '#FFFFFF' : '#B7C0D1' }}
+                  >
+                    {block.id}. {block.title}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Form Card */}
-          <Card className="bg-card/50 backdrop-blur-sm border-border/40">
-            <CardHeader>
-              <CardTitle>{BLOCKS[currentBlock].title}</CardTitle>
-              <CardDescription>{BLOCKS[currentBlock].description}</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Block 0: Базовая информация */}
-              {currentBlock === 0 && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="businessName">Название бизнеса</Label>
-                    <Input
-                      id="businessName"
-                      placeholder="Например: SupaBots"
-                      value={formData.businessName || ""}
-                      onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="industry">Сфера деятельности</Label>
-                    <Input
-                      id="industry"
-                      placeholder="Например: Wellness & Health"
-                      value={formData.industry || ""}
-                      onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="website">Сайт</Label>
-                    <Input
-                      id="website"
-                      type="url"
-                      placeholder="https://example.com"
-                      value={formData.website || ""}
-                      onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Краткое описание</Label>
-                    <Textarea
-                      id="description"
-                      placeholder="Расскажите о вашем бизнесе..."
-                      rows={4}
-                      value={formData.description || ""}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    />
-                  </div>
-                  <div className="pt-4 border-t border-border/40">
-                    <Button variant="outline" className="w-full gap-2">
-                      <Mic className="w-4 h-4" />
-                      Заполнить голосом
-                    </Button>
-                  </div>
-                </>
-              )}
+          {/* Form */}
+          <div className="col-span-9">
+            <div className="p-8 rounded-2xl backdrop-blur-xl" style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(255,255,255,0.08)'
+            }}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold" style={{ color: '#FFFFFF' }}>
+                  {BLOCKS[currentBlock].title}
+                </h2>
+                <Button variant="outline" size="sm" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                  <Mic className="w-4 h-4 mr-2" />
+                  Заполнить голосом
+                </Button>
+              </div>
 
-              {/* Other blocks - placeholder */}
-              {currentBlock > 0 && (
-                <div className="py-12 text-center text-muted-foreground">
-                  <p>Форма для блока "{BLOCKS[currentBlock].title}" будет здесь</p>
-                  <p className="text-sm mt-2">Блок {currentBlock + 1} из {BLOCKS.length}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              {/* Формы блоков */}
+              {currentBlock === 0 && <Block0Form data={currentData} onChange={updateField} />}
+              {currentBlock === 1 && <Block1Form data={currentData} onChange={updateField} />}
+              {currentBlock === 2 && <Block2Form data={currentData} onChange={updateField} />}
+              {currentBlock === 3 && <Block3Form data={currentData} onChange={updateField} />}
+              {currentBlock === 4 && <Block4Form data={currentData} onChange={updateField} />}
+              {currentBlock === 5 && <Block5Form data={currentData} onChange={updateField} />}
+              {currentBlock === 6 && <Block6Form data={currentData} onChange={updateField} />}
+              {currentBlock === 7 && <Block7Form data={currentData} onChange={updateField} />}
+              {currentBlock === 8 && <Block8Form data={currentData} onChange={updateField} />}
+              {currentBlock === 9 && <Block9Form data={currentData} onChange={updateField} />}
+              {currentBlock === 10 && <Block10Form data={currentData} onChange={updateField} />}
+              {currentBlock === 11 && <Block11Form data={currentData} onChange={updateField} />}
+              {currentBlock === 12 && <Block12Form data={currentData} onChange={updateField} />}
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-6">
-            <Button
-              variant="outline"
-              onClick={handlePrev}
-              disabled={currentBlock === 0}
-              className="gap-2"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Назад
-            </Button>
-            <Button
-              onClick={handleNext}
-              disabled={currentBlock === BLOCKS.length - 1}
-              className="gap-2"
-            >
-              Далее
-              <ArrowRight className="w-4 h-4" />
-            </Button>
+              {/* Navigation */}
+              <div className="flex justify-between mt-8 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentBlock(Math.max(0, currentBlock - 1))}
+                  disabled={currentBlock === 0}
+                  style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Назад
+                </Button>
+                <Button
+                  onClick={() => {
+                    saveBlock()
+                    if (currentBlock < BLOCKS.length - 1) {
+                      setCurrentBlock(currentBlock + 1)
+                    }
+                  }}
+                  disabled={loading}
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600"
+                >
+                  {currentBlock === BLOCKS.length - 1 ? "Завершить" : "Далее"}
+                  <ChevronRight className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
-  );
+  )
 }
+
+// Компонент поля
+function Field({ label, required, children, helper }: any) {
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
+        {label}
+        {required && <span style={{ color: '#FF4FD8' }} className="ml-1">*</span>}
+      </Label>
+      {children}
+      {helper && <p className="text-xs" style={{ color: '#B7C0D1' }}>{helper}</p>}
+    </div>
+  )
+}
+
+// Блок 0: Тип бизнеса
+function Block0Form({ data, onChange }: any) {
+  return (
+    <div className="space-y-6">
+      <Field label="Тип бизнеса" required>
+        <select
+          className="w-full px-4 py-2 rounded-lg border"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+          value={data.businessType || ''}
+          onChange={(e) => onChange('businessType', e.target.value)}
+        >
+          <option value="">Выберите тип</option>
+          <option value="expert">Эксперт</option>
+          <option value="services">Услуги</option>
+          <option value="ecom">E-commerce</option>
+          <option value="saas">SaaS</option>
+          <option value="other">Другое</option>
+        </select>
+      </Field>
+
+      <Field label="Бренд" required>
+        <select
+          className="w-full px-4 py-2 rounded-lg border"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+          value={data.brandType || ''}
+          onChange={(e) => onChange('brandType', e.target.value)}
+        >
+          <option value="">Выберите тип</option>
+          <option value="personal">Личный бренд</option>
+          <option value="company">Компания</option>
+        </select>
+      </Field>
+
+      <Field label="Цель на 30-90 дней" required helper="Можно выбрать несколько">
+        <div className="space-y-2">
+          {[
+            { value: 'leads', label: 'Лиды' },
+            { value: 'sales', label: 'Продажи' },
+            { value: 'subscribers', label: 'Подписчики' },
+            { value: 'seo_traffic', label: 'SEO-трафик' },
+            { value: 'geo_visibility', label: 'GEO-видимость' },
+            { value: 'launch', label: 'Запуск' }
+          ].map(goal => (
+            <div key={goal.value} className="flex items-center space-x-2">
+              <Checkbox
+                checked={data.goals?.includes(goal.value)}
+                onCheckedChange={(checked) => {
+                  const goals = data.goals || []
+                  onChange('goals', checked 
+                    ? [...goals, goal.value]
+                    : goals.filter((g: string) => g !== goal.value)
+                  )
+                }}
+              />
+              <label className="text-sm" style={{ color: '#FFFFFF' }}>{goal.label}</label>
+            </div>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Основной KPI" required helper="Например: 50 лидов/месяц">
+        <Input
+          value={data.mainKPI || ''}
+          onChange={(e) => onChange('mainKPI', e.target.value)}
+          placeholder="50 лидов/месяц"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Контент-ресурсы" required>
+        <div className="space-y-2">
+          {[
+            { value: 'faceInFrame', label: 'Лицо в кадре' },
+            { value: 'voiceAvailable', label: 'Голос доступен' },
+            { value: 'hasPhotoshoots', label: 'Есть фотосессии' },
+            { value: 'hasCases', label: 'Есть кейсы' }
+          ].map(item => (
+            <div key={item.value} className="flex items-center space-x-2">
+              <Checkbox
+                checked={data[item.value]}
+                onCheckedChange={(checked) => onChange(item.value, checked)}
+              />
+              <label className="text-sm" style={{ color: '#FFFFFF' }}>{item.label}</label>
+            </div>
+          ))}
+        </div>
+      </Field>
+
+      <Field label="Ограничения" helper="Что нельзя, сроки, бюджет рекламы">
+        <Textarea
+          value={data.limitations || ''}
+          onChange={(e) => onChange('limitations', e.target.value)}
+          placeholder="Опишите ограничения..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+    </div>
+  )
+}
+
+// Блок 1: Суть бизнеса
+function Block1Form({ data, onChange }: any) {
+  return (
+    <div className="space-y-6">
+      <Field label="Название (бренд/проект)" required>
+        <Input
+          value={data.brandName || ''}
+          onChange={(e) => onChange('brandName', e.target.value)}
+          placeholder="Например: SupaBots"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      {data.brandType === 'personal' && (
+        <Field label="Имя + роль" required>
+          <Input
+            value={data.personName || ''}
+            onChange={(e) => onChange('personName', e.target.value)}
+            placeholder="Например: Иван Иванов, маркетолог"
+            style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+          />
+        </Field>
+      )}
+
+      <Field label="Что продаёте (простыми словами)" required>
+        <Textarea
+          value={data.whatYouSell || ''}
+          onChange={(e) => onChange('whatYouSell', e.target.value)}
+          placeholder="Опишите ваш продукт или услугу..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Кому продаёте (кто покупатель)" required>
+        <Input
+          value={data.targetCustomer || ''}
+          onChange={(e) => onChange('targetCustomer', e.target.value)}
+          placeholder="Например: владельцы малого бизнеса"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Главный результат клиента" required helper="Что изменится после покупки?">
+        <Textarea
+          value={data.mainResult || ''}
+          onChange={(e) => onChange('mainResult', e.target.value)}
+          placeholder="Опишите результат..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="3 причины доверия" helper="Опыт, цифры, сертификаты, кейсы, медиа">
+        <Textarea
+          value={data.trustReasons || ''}
+          onChange={(e) => onChange('trustReasons', e.target.value)}
+          placeholder="1. ...\n2. ...\n3. ..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="География" helper="РФ/город/регионы/онлайн">
+        <Input
+          value={data.geography || ''}
+          onChange={(e) => onChange('geography', e.target.value)}
+          placeholder="Например: Москва и МО"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+    </div>
+  )
+}
+
+// Блок 2: Аудитория
+function Block2Form({ data, onChange }: any) {
+  return (
+    <div className="space-y-6">
+      <Field label="Тип клиентов" required>
+        <select
+          className="w-full px-4 py-2 rounded-lg border"
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+          value={data.clientType || ''}
+          onChange={(e) => onChange('clientType', e.target.value)}
+        >
+          <option value="">Выберите тип</option>
+          <option value="b2c">B2C</option>
+          <option value="b2b">B2B</option>
+          <option value="mixed">Mixed</option>
+        </select>
+      </Field>
+
+      <Field label="Сегменты аудитории (до 3)" required>
+        <Textarea
+          value={data.segments || ''}
+          onChange={(e) => onChange('segments', e.target.value)}
+          placeholder="Опишите основные сегменты вашей аудитории..."
+          rows={4}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Боли и проблемы" required helper="Какие проблемы решаете? (1-3)">
+        <Textarea
+          value={data.pains || ''}
+          onChange={(e) => onChange('pains', e.target.value)}
+          placeholder="1. ...\n2. ...\n3. ..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Желаемый результат" required helper="Чего хочет достичь клиент?">
+        <Textarea
+          value={data.desiredResult || ''}
+          onChange={(e) => onChange('desiredResult', e.target.value)}
+          placeholder="Опишите желаемый результат..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Главные возражения (1-3)" required helper="Почему клиенты могут отказаться?">
+        <Textarea
+          value={data.objections || ''}
+          onChange={(e) => onChange('objections', e.target.value)}
+          placeholder="1. ...\n2. ...\n3. ..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      <Field label="Слова клиента" helper="Как клиент формулирует проблему своими словами?">
+        <Textarea
+          value={data.clientWords || ''}
+          onChange={(e) => onChange('clientWords', e.target.value)}
+          placeholder="Примеры фраз клиентов..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+
+      {data.clientType === 'b2b' && (
+        <>
+          <Field label="ЛПР и роли" required helper="Кто принимает решение о покупке?">
+            <Input
+              value={data.decisionMakers || ''}
+              onChange={(e) => onChange('decisionMakers', e.target.value)}
+              placeholder="Например: Директор, CFO"
+              style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+          </Field>
+
+          <Field label="Критерии выбора" required helper="Цена, срок, качество, риск">
+            <Textarea
+              value={data.selectionCriteria || ''}
+              onChange={(e) => onChange('selectionCriteria', e.target.value)}
+              placeholder="Опишите критерии..."
+              rows={3}
+              style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+          </Field>
+        </>
+      )}
+
+      <Field label="Триггеры доверия" helper="Что нужно увидеть клиенту, чтобы решиться?">
+        <Textarea
+          value={data.trustTriggers || ''}
+          onChange={(e) => onChange('trustTriggers', e.target.value)}
+          placeholder="Опишите триггеры доверия..."
+          rows={3}
+          style={{ background: '#0B0E17', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+        />
+      </Field>
+    </div>
+  )
+}
+
+
