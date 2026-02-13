@@ -114,11 +114,18 @@ export default function Briefing() {
           aiData = JSON.parse(content)
         }
         
-        setFormData(prev => ({
-          ...prev,
-          [currentBlock]: aiData
-        }))
-        toast.success("Блок заполнен с помощью AI!")
+        // Создаем новый объект formData для триггера перерисовки
+        setFormData(prev => {
+          const newData = {
+            ...prev,
+            [currentBlock]: { ...aiData }
+          }
+          // Форсируем обновление через setTimeout для гарантии перерисовки
+          setTimeout(() => {
+            toast.success("Блок заполнен с помощью AI!")
+          }, 100)
+          return newData
+        })
         setShowAiModal(false)
         setAiContext("")
       } catch (parseError) {
