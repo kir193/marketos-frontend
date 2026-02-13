@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: marketos-postgres
+    environment:
+      POSTGRES_DB: marketos
+      POSTGRES_USER: marketos
+      POSTGRES_PASSWORD: marketos123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - marketos-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marketos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: marketos-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/marketos
+      SPRING_DATASOURCE_USERNAME: marketos
+      SPRING_DATASOURCE_PASSWORD: marketos123
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - marketos-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://31.129.104.11:8080/api
+    container_name: marketos-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - marketos-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+
+networks:
+  marketos-network:
+    driver: bridge
