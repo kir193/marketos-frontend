@@ -18,7 +18,8 @@ import {
   Block11Form,
   Block12Form
 } from '@/components/BriefingBlocks'
-import { Mic, ChevronLeft, ChevronRight, Save } from "lucide-react"
+import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft } from "lucide-react"
+import { useLocation } from "wouter"
 import { briefingApi } from "@/lib/api"
 
 // Типы данных
@@ -43,6 +44,7 @@ const BLOCKS = [
 ]
 
 export default function Briefing() {
+  const [, navigate] = useLocation()
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<BriefingData>({})
   const [loading, setLoading] = useState(false)
@@ -92,7 +94,18 @@ export default function Briefing() {
       <div className="border-b" style={{ borderColor: 'rgba(255,255,255,0.1)', background: '#0B0E17' }}>
         <div className="container py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>Брифинг</h1>
+            <div className="flex items-center gap-4">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => navigate('/dashboard')}
+                className="text-gray-400 hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Назад
+              </Button>
+              <h1 className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>Брифинг</h1>
+            </div>
             <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
               <Save className="w-4 h-4 mr-2" />
               Сохранить
