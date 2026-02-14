@@ -63,8 +63,14 @@ export default function Briefing() {
     try {
       const data = await briefingApi.getBriefing(businessId)
       setFormData(data)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to load briefing:", error)
+      // Если брифинг не найден (404 или 500), начинаем с пустой формы
+      if (error.response?.status === 404 || error.response?.status === 500) {
+        setFormData({})
+      } else {
+        toast.error("Ошибка загрузки брифинга")
+      }
     }
   }
 
