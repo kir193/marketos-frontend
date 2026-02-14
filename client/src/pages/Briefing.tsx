@@ -374,7 +374,7 @@ function Block0Form({ data, onChange }: any) {
           ].map(goal => (
             <div key={goal.value} className="flex items-center space-x-2">
               <Checkbox
-                checked={data.goals?.includes(goal.value)}
+                checked={data.goals?.includes(goal.value) || false}
                 onCheckedChange={(checked) => {
                   const goals = data.goals || []
                   onChange('goals', checked 
@@ -408,7 +408,7 @@ function Block0Form({ data, onChange }: any) {
           ].map(item => (
             <div key={item.value} className="flex items-center space-x-2">
               <Checkbox
-                checked={data[item.value]}
+                checked={data[item.value] || false}
                 onCheckedChange={(checked) => onChange(item.value, checked)}
               />
               <label className="text-sm" style={{ color: '#FFFFFF' }}>{item.label}</label>
