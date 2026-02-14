@@ -96,6 +96,91 @@ export default function Briefing() {
     }))
   }
 
+  // Маппинг AI ответов к значениям формы
+  const normalizeAiData = (aiData: any, blockNumber: number) => {
+    const normalized = { ...aiData }
+    
+    if (blockNumber === 0) {
+      // Маппинг типов бизнеса
+      const businessTypeMap: Record<string, string> = {
+        'E-commerce': 'ecom',
+        'Ecommerce': 'ecom',
+        'E-Commerce': 'ecom',
+        'Эксперт': 'expert',
+        'Expert': 'expert',
+        'Услуги': 'services',
+        'Services': 'services',
+        'SaaS': 'saas',
+        'Другое': 'other',
+        'Other': 'other'
+      }
+      
+      // Маппинг типов бренда
+      const brandTypeMap: Record<string, string> = {
+        'Личный бренд': 'personal',
+        'Personal': 'personal',
+        'Компания': 'company',
+        'Company': 'company'
+      }
+      
+      // Маппинг целей
+      const goalsMap: Record<string, string> = {
+        'Лиды': 'leads',
+        'Leads': 'leads',
+        'Продажи': 'sales',
+        'Sales': 'sales',
+        'Подписчики': 'subscribers',
+        'Subscribers': 'subscribers',
+        'SEO-трафик': 'seo_traffic',
+        'SEO Traffic': 'seo_traffic',
+        'GEO-видимость': 'geo_visibility',
+        'GEO Visibility': 'geo_visibility',
+        'Запуск': 'launch',
+        'Launch': 'launch'
+      }
+      
+      // Маппинг ресурсов
+      const resourcesMap: Record<string, string> = {
+        'Лицо в кадре': 'faceInFrame',
+        'Face in Frame': 'faceInFrame',
+        'Голос доступен': 'voiceAvailable',
+        'Voice Available': 'voiceAvailable',
+        'Есть фотосессии': 'hasPhotoshoots',
+        'Has Photoshoots': 'hasPhotoshoots',
+        'Есть кейсы': 'hasCases',
+        'Has Cases': 'hasCases'
+      }
+      
+      // Нормализация businessType
+      if (normalized.businessType && businessTypeMap[normalized.businessType]) {
+        normalized.businessType = businessTypeMap[normalized.businessType]
+      }
+      
+      // Нормализация brandType
+      if (normalized.brandType && brandTypeMap[normalized.brandType]) {
+        normalized.brandType = brandTypeMap[normalized.brandType]
+      }
+      
+      // Нормализация goals
+      if (normalized.goals && Array.isArray(normalized.goals)) {
+        normalized.goals = normalized.goals.map((goal: string) => 
+          goalsMap[goal] || goal.toLowerCase().replace(/[- ]/g, '_')
+        )
+      }
+      
+      // Нормализация resources - преобразуем массив в boolean поля
+      if (normalized.resources && Array.isArray(normalized.resources)) {
+        normalized.resources.forEach((resource: string) => {
+          const key = resourcesMap[resource] || resource
+          normalized[key] = true
+        })
+        delete normalized.resources
+      }
+    }
+    
+    return normalized
+  }
+
   const handleAiFill = async () => {
     if (!aiContext.trim()) {
       toast.error("Введите описание бизнеса")
@@ -120,11 +205,17 @@ export default function Briefing() {
           aiData = JSON.parse(content)
         }
         
+        // Нормализуем данные от AI
+        const normalizedData = normalizeAiData(aiData, currentBlock)
+        
+        console.log('AI raw data:', aiData)
+        console.log('Normalized data:', normalizedData)
+        
         // Создаем новый объект formData для триггера перерисовки
         setFormData(prev => {
           const newData = {
             ...prev,
-            [currentBlock]: { ...aiData }
+            [currentBlock]: { ...normalizedData }
           }
           // Форсируем обновление через setTimeout для гарантии перерисовки
           setTimeout(() => {
