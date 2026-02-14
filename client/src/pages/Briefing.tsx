@@ -51,6 +51,11 @@ export default function Briefing() {
   const [aiLoading, setAiLoading] = useState(false)
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiContext, setAiContext] = useState("")
+  const [showBulkAiModal, setShowBulkAiModal] = useState(false)
+  const [bulkAiContext, setBulkAiContext] = useState("")
+  const [bulkAiProgress, setBulkAiProgress] = useState<{[key: number]: 'pending' | 'loading' | 'success' | 'error'}>({})
+  const [showAiReport, setShowAiReport] = useState(false)
+  const [aiReport, setAiReport] = useState<{success: number[], partial: number[], failed: number[]}>({success: [], partial: [], failed: []})
   // TODO: В production получать businessId из URL параметра или контекста пользователя
   // Например: const { id } = useParams() или из AuthContext
   const businessId = 1
@@ -181,6 +186,89 @@ export default function Briefing() {
     return normalized
   }
 
+  const handleBulkAiFill = async () => {
+    if (!bulkAiContext.trim()) {
+      toast.error("Введите описание бизнеса")
+      return
+    }
+
+    setAiLoading(true)
+    setShowBulkAiModal(false)
+    
+    // Инициализируем прогресс для всех блоков
+    const initialProgress: {[key: number]: 'pending' | 'loading' | 'success' | 'error'} = {}
+    BLOCKS.forEach(block => {
+      initialProgress[block.id] = 'pending'
+    })
+    setBulkAiProgress(initialProgress)
+
+    const report = { success: [] as number[], partial: [] as number[], failed: [] as number[] }
+
+    // Последовательно заполняем все блоки
+    for (const block of BLOCKS) {
+      try {
+        // Обновляем статус на "loading"
+        setBulkAiProgress(prev => ({ ...prev, [block.id]: 'loading' }))
+
+        const response = await briefingApi.aiFillBlock(businessId, block.id, bulkAiContext)
+        const content = response.content
+        let aiData: any = null
+
+        try {
+          const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+          if (jsonMatch) {
+            aiData = JSON.parse(jsonMatch[1])
+          } else {
+            aiData = JSON.parse(content)
+          }
+
+          const normalizedData = normalizeAiData(aiData, block.id)
+
+          // Проверяем качество заполнения
+          const filledFields = Object.values(normalizedData).filter(v => v && v !== '').length
+          const totalFields = Object.keys(normalizedData).length
+
+          setFormData(prev => ({
+            ...prev,
+            [block.id]: { ...normalizedData }
+          }))
+
+          // Определяем статус блока
+          if (filledFields === totalFields) {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'success' }))
+            report.success.push(block.id)
+          } else if (filledFields > 0) {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'success' }))
+            report.partial.push(block.id)
+          } else {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+            report.failed.push(block.id)
+          }
+
+          // Сохраняем блок
+          await briefingApi.saveBlock(businessId, block.id, normalizedData)
+        } catch (parseError) {
+          console.error(`Failed to parse AI response for block ${block.id}:`, parseError)
+          setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+          report.failed.push(block.id)
+        }
+      } catch (error) {
+        console.error(`AI fill error for block ${block.id}:`, error)
+        setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+        report.failed.push(block.id)
+      }
+
+      // Небольшая задержка между запросами
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+
+    setAiLoading(false)
+    setAiReport(report)
+    setShowAiReport(true)
+    setBulkAiContext("")
+    toast.success(`Заполнено ${report.success.length + report.partial.length} из ${BLOCKS.length} блоков!`)
+  }
+
   const handleAiFill = async () => {
     if (!aiContext.trim()) {
       toast.error("Введите описание бизнеса")
@@ -258,10 +346,21 @@ export default function Briefing() {
               </Button>
               <h1 className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>Брифинг</h1>
             </div>
-            <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
-              <Save className="w-4 h-4 mr-2" />
-              Сохранить
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setShowBulkAiModal(true)} 
+                disabled={aiLoading}
+                variant="outline"
+                className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Заполнить весь брифинг
+              </Button>
+              <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
+                <Save className="w-4 h-4 mr-2" />
+                Сохранить
+              </Button>
+            </div>
           </div>
           <Progress value={progress} className="mt-4" />
         </div>
@@ -277,20 +376,27 @@ export default function Briefing() {
             }}>
               <h3 className="text-sm font-semibold mb-4" style={{ color: '#FFFFFF' }}>Блоки</h3>
               <div className="space-y-1">
-                {BLOCKS.map((block) => (
-                  <button
-                    key={block.id}
-                    onClick={() => setCurrentBlock(block.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      currentBlock === block.id
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                        : "hover:bg-white/5"
-                    }`}
-                    style={{ color: currentBlock === block.id ? '#FFFFFF' : '#B7C0D1' }}
-                  >
-                    {block.id}. {block.title}
-                  </button>
-                ))}
+                {BLOCKS.map((block) => {
+                  const status = bulkAiProgress[block.id]
+                  const statusIcon = status === 'success' ? '✅' : 
+                                    status === 'loading' ? '⏳' : 
+                                    status === 'error' ? '❌' : ''
+                  return (
+                    <button
+                      key={block.id}
+                      onClick={() => setCurrentBlock(block.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
+                        currentBlock === block.id
+                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                          : "hover:bg-white/5"
+                      }`}
+                      style={{ color: currentBlock === block.id ? '#FFFFFF' : '#B7C0D1' }}
+                    >
+                      <span>{block.id}. {block.title}</span>
+                      {statusIcon && <span className="text-base">{statusIcon}</span>}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -405,6 +511,118 @@ export default function Briefing() {
                 {aiLoading ? "Заполняем..." : "Заполнить"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка массового AI автозаполнения */}
+      {showBulkAiModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowBulkAiModal(false)}>
+          <div 
+            className="p-6 rounded-2xl max-w-lg w-full mx-4" 
+            style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-2" style={{ color: '#FFFFFF' }}>
+              Заполнить весь брифинг с помощью AI
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Опишите ваш бизнес, и AI заполнит все 13 блоков брифинга. Это может занять 1-2 минуты.
+            </p>
+            <Textarea
+              value={bulkAiContext}
+              onChange={(e) => setBulkAiContext(e.target.value)}
+              placeholder="Например: Интернет-магазин косметики с доставкой по России. Целевая аудитория - женщины 25-45 лет. Средний чек 3000₽. Цель - 100 продаж/месяц."
+              rows={6}
+              className="mb-4"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBulkAiModal(false)
+                  setBulkAiContext("")
+                }}
+                className="flex-1"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleBulkAiFill}
+                disabled={aiLoading || !bulkAiContext.trim()}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600"
+              >
+                {aiLoading ? "Заполняем..." : "Заполнить все"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Отчет после заполнения */}
+      {showAiReport && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowAiReport(false)}>
+          <div 
+            className="p-6 rounded-2xl max-w-lg w-full mx-4" 
+            style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4" style={{ color: '#FFFFFF' }}>
+              Отчет о заполнении
+            </h3>
+            
+            <div className="space-y-4 mb-6">
+              {aiReport.success.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">✅</span>
+                    <span className="font-semibold" style={{ color: '#22c55e' }}>
+                      Успешно заполнено: {aiReport.success.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.success.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {aiReport.partial.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">⚠️</span>
+                    <span className="font-semibold" style={{ color: '#eab308' }}>
+                      Требует проверки: {aiReport.partial.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.partial.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {aiReport.failed.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">❌</span>
+                    <span className="font-semibold" style={{ color: '#ef4444' }}>
+                      Не удалось заполнить: {aiReport.failed.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.failed.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={() => setShowAiReport(false)}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600"
+            >
+              Понятно
+            </Button>
           </div>
         </div>
       )}
