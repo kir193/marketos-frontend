@@ -263,9 +263,18 @@ export default function Briefing() {
       return
     }
 
-    if (!businessId) {
-      toast.error("Сначала сохраните первый блок")
-      return
+    // Если нет businessId, создаем новый Business
+    let currentBusinessId = businessId
+    if (!currentBusinessId) {
+      try {
+        const newBusiness = await businessApi.create({ name: "Новый проект" })
+        currentBusinessId = newBusiness.id
+        setBusinessId(newBusiness.id)
+        navigate(`/briefing/${newBusiness.id}`)
+      } catch (error) {
+        toast.error("Ошибка создания проекта")
+        return
+      }
     }
 
     setAiLoading(true)
@@ -280,13 +289,20 @@ export default function Briefing() {
 
     const report = { success: [] as number[], partial: [] as number[], failed: [] as number[] }
 
+    // Проверяем что businessId создан
+    if (!currentBusinessId) {
+      toast.error("Ошибка: не удалось создать проект")
+      setAiLoading(false)
+      return
+    }
+
     // Последовательно заполняем все блоки
     for (const block of BLOCKS) {
       try {
         // Обновляем статус на "loading"
         setBulkAiProgress(prev => ({ ...prev, [block.id]: 'loading' }))
 
-        const response = await briefingApi.aiFillBlock(businessId, block.id, bulkAiContext)
+        const response = await briefingApi.aiFillBlock(currentBusinessId, block.id, bulkAiContext)
         const content = response.content
         let aiData: any = null
 
@@ -322,7 +338,7 @@ export default function Briefing() {
           }
 
           // Сохраняем блок
-          await briefingApi.saveBlock(businessId, block.id, normalizedData)
+          await briefingApi.saveBlock(currentBusinessId, block.id, normalizedData)
         } catch (parseError) {
           console.error(`Failed to parse AI response for block ${block.id}:`, parseError)
           setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
