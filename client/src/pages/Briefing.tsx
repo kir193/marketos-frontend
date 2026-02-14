@@ -170,11 +170,34 @@ export default function Briefing() {
     // Проверяем реальную заполненность, игнорируя плейсхолдеры
     const values = Object.entries(blockData).filter(([key, value]) => {
       if (!value) return false
-      const strValue = String(value)
+      const strValue = String(value).trim()
+      
+      // Игнорируем пустые значения
+      if (strValue === '') return false
+      
       // Игнорируем плейсхолдеры
-      if (strValue.includes('Опишите') || strValue.includes('Например') || 
-          strValue.includes('...') || strValue.includes('https://competitor') ||
-          strValue.includes('Выберите')) return false
+      const placeholderPatterns = [
+        'Опишите',
+        'Например',
+        'https://competitor',
+        'Выберите',
+        'Нравится:',
+        'Не нравится:',
+        /^1\. \.\.\.$/,  // "1. ..."
+        /^1\. \.\.\.\n2\. \.\.\.$/,  // "1. ...\n2. ..."
+        /^1\. \.\.\.\n2\. \.\.\.\n3\. \.\.\.$/,  // "1. ...\n2. ...\n3. ..."
+        /^@competitor/,  // "@competitor1"
+        /^https:\/\/competitor\d+\.com$/  // "https://competitor1.com"
+      ]
+      
+      for (const pattern of placeholderPatterns) {
+        if (typeof pattern === 'string') {
+          if (strValue.includes(pattern)) return false
+        } else {
+          if (pattern.test(strValue)) return false
+        }
+      }
+      
       return true
     })
     
