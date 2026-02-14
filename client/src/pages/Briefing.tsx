@@ -96,9 +96,8 @@ export default function Briefing() {
       if (!currentBusinessId) {
         const block0Data = formData[0] || {}
         const name = businessName || block0Data.brandName || "Новый проект"
-        const industry = block0Data.businessType || ""
         
-        const newBusiness = await businessApi.create({ name, industry })
+        const newBusiness = await businessApi.create({ name })
         currentBusinessId = newBusiness.id
         setBusinessId(currentBusinessId)
         
