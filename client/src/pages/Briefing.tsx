@@ -20,7 +20,7 @@ import {
 } from '@/components/BriefingBlocks'
 import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft, Sparkles } from "lucide-react"
 import { useLocation } from "wouter"
-import { briefingApi } from "@/lib/api"
+import { briefingApi, businessApi } from "@/lib/api"
 
 // Типы данных
 interface BriefingData {
@@ -44,7 +44,7 @@ const BLOCKS = [
 ]
 
 export default function Briefing() {
-  const [, navigate] = useLocation()
+  const [location, navigate] = useLocation()
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<BriefingData>({})
   const [loading, setLoading] = useState(false)
@@ -56,25 +56,33 @@ export default function Briefing() {
   const [bulkAiProgress, setBulkAiProgress] = useState<{[key: number]: 'pending' | 'loading' | 'success' | 'error'}>({})
   const [showAiReport, setShowAiReport] = useState(false)
   const [aiReport, setAiReport] = useState<{success: number[], partial: number[], failed: number[]}>({success: [], partial: [], failed: []})
-  // TODO: В production получать businessId из URL параметра или контекста пользователя
-  // Например: const { id } = useParams() или из AuthContext
-  const businessId = 1
+  const [businessId, setBusinessId] = useState<number | null>(null)
+  const [businessName, setBusinessName] = useState<string>("")
 
   useEffect(() => {
     loadBriefing()
   }, [])
 
   const loadBriefing = async () => {
-    try {
-      const data = await briefingApi.getBriefing(businessId)
-      setFormData(data)
-    } catch (error: any) {
-      console.error("Failed to load briefing:", error)
-      // Если брифинг не найден (404 или 500), начинаем с пустой формы
-      if (error.response?.status === 404 || error.response?.status === 500) {
-        setFormData({})
-      } else {
-        toast.error("Ошибка загрузки брифинга")
+    // Получаем ID из URL
+    const pathParts = location.split('/')
+    const idFromUrl = pathParts[pathParts.length - 1]
+    
+    if (idFromUrl && idFromUrl !== 'new') {
+      const id = parseInt(idFromUrl)
+      if (!isNaN(id)) {
+        setBusinessId(id)
+        try {
+          const data = await briefingApi.getBriefing(id)
+          setFormData(data)
+        } catch (error: any) {
+          console.error("Failed to load briefing:", error)
+          if (error.response?.status === 404 || error.response?.status === 500) {
+            setFormData({})
+          } else {
+            toast.error("Ошибка загрузки брифинга")
+          }
+        }
       }
     }
   }
@@ -82,9 +90,28 @@ export default function Briefing() {
   const saveBlock = async () => {
     setLoading(true)
     try {
-      await briefingApi.saveBlock(businessId, currentBlock, formData[currentBlock] || {})
-      toast.success("Блок сохранен!")
+      let currentBusinessId = businessId
+      
+      // Если это новый брифинг (нет businessId), создаем Business
+      if (!currentBusinessId) {
+        const block0Data = formData[0] || {}
+        const name = businessName || block0Data.brandName || "Новый проект"
+        const industry = block0Data.businessType || ""
+        
+        const newBusiness = await businessApi.create({ name, industry })
+        currentBusinessId = newBusiness.id
+        setBusinessId(currentBusinessId)
+        
+        // Обновляем URL
+        navigate(`/briefing/${currentBusinessId}`, { replace: true })
+      }
+      
+      if (currentBusinessId) {
+        await briefingApi.saveBlock(currentBusinessId, currentBlock, formData[currentBlock] || {})
+        toast.success("Блок сохранен!")
+      }
     } catch (error) {
+      console.error("Save error:", error)
       toast.error("Ошибка сохранения")
     } finally {
       setLoading(false)
@@ -192,6 +219,11 @@ export default function Briefing() {
       return
     }
 
+    if (!businessId) {
+      toast.error("Сначала сохраните первый блок")
+      return
+    }
+
     setAiLoading(true)
     setShowBulkAiModal(false)
     
@@ -272,6 +304,11 @@ export default function Briefing() {
   const handleAiFill = async () => {
     if (!aiContext.trim()) {
       toast.error("Введите описание бизнеса")
+      return
+    }
+
+    if (!businessId) {
+      toast.error("Сначала сохраните первый блок")
       return
     }
 
