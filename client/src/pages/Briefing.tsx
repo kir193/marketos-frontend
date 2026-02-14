@@ -18,9 +18,9 @@ import {
   Block11Form,
   Block12Form
 } from '@/components/BriefingBlocks'
-import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft } from "lucide-react"
+import { Mic, ChevronLeft, ChevronRight, Save, ArrowLeft, Sparkles } from "lucide-react"
 import { useLocation } from "wouter"
-import { briefingApi } from "@/lib/api"
+import { briefingApi, businessApi } from "@/lib/api"
 
 // Типы данных
 interface BriefingData {
@@ -44,31 +44,89 @@ const BLOCKS = [
 ]
 
 export default function Briefing() {
-  const [, navigate] = useLocation()
+  const [location, navigate] = useLocation()
   const [currentBlock, setCurrentBlock] = useState(0)
   const [formData, setFormData] = useState<BriefingData>({})
   const [loading, setLoading] = useState(false)
-  const businessId = 1 // TODO: получать из контекста/роута
+  const [aiLoading, setAiLoading] = useState(false)
+  const [showAiModal, setShowAiModal] = useState(false)
+  const [aiContext, setAiContext] = useState("")
+  const [showBulkAiModal, setShowBulkAiModal] = useState(false)
+  const [bulkAiContext, setBulkAiContext] = useState("")
+  const [bulkAiProgress, setBulkAiProgress] = useState<{[key: number]: 'pending' | 'loading' | 'success' | 'error'}>({})
+  const [showAiReport, setShowAiReport] = useState(false)
+  const [aiReport, setAiReport] = useState<{success: number[], partial: number[], failed: number[]}>({success: [], partial: [], failed: []})
+  const [businessId, setBusinessId] = useState<number | null>(null)
+  const [businessName, setBusinessName] = useState<string>("")
 
   useEffect(() => {
     loadBriefing()
   }, [])
 
   const loadBriefing = async () => {
-    try {
-      const data = await briefingApi.getBriefing(businessId)
-      setFormData(data)
-    } catch (error) {
-      console.error("Failed to load briefing:", error)
+    // Получаем ID из URL
+    const pathParts = location.split('/')
+    const idFromUrl = pathParts[pathParts.length - 1]
+    
+    if (idFromUrl && idFromUrl !== 'new') {
+      const id = parseInt(idFromUrl)
+      if (!isNaN(id)) {
+        setBusinessId(id)
+        try {
+          const business = await businessApi.getById(id)
+          setBusinessName(business.name)
+          
+          // Загружаем данные из brief поля
+          if (business.brief) {
+            // Преобразуем brief в formData формат
+            const loadedData: BriefingData = {}
+            Object.keys(business.brief).forEach(key => {
+              if (key.startsWith('block_')) {
+                const blockNum = parseInt(key.replace('block_', ''))
+                loadedData[blockNum] = business.brief[key]
+              }
+            })
+            setFormData(loadedData)
+          }
+        } catch (error: any) {
+          console.error("Failed to load briefing:", error)
+          if (error.response?.status === 404 || error.response?.status === 500) {
+            setFormData({})
+          } else {
+            toast.error("Ошибка загрузки брифинга")
+          }
+        }
+      }
     }
   }
 
   const saveBlock = async () => {
     setLoading(true)
     try {
-      await briefingApi.saveBlock(businessId, currentBlock, formData[currentBlock] || {})
-      toast.success("Блок сохранен!")
+      let currentBusinessId = businessId
+      
+      // Если это новый брифинг (нет businessId), создаем Business
+      if (!currentBusinessId) {
+        const block0Data = formData[0] || {}
+        const block12Data = formData[12] || {}
+        // Приоритет: companyName из блока 12 > brandName из блока 0 > "Новый проект"
+        const name = block12Data.companyName || block0Data.brandName || businessName || "Новый проект"
+        
+        const newBusiness = await businessApi.create({ name })
+        currentBusinessId = newBusiness.id
+        setBusinessId(currentBusinessId)
+        setBusinessName(name)
+        
+        // Обновляем URL
+        navigate(`/briefing/${currentBusinessId}`, { replace: true })
+      }
+      
+      if (currentBusinessId) {
+        await briefingApi.saveBlock(currentBusinessId, currentBlock, formData[currentBlock] || {})
+        toast.success("Блок сохранен!")
+      }
     } catch (error) {
+      console.error("Save error:", error)
       toast.error("Ошибка сохранения")
     } finally {
       setLoading(false)
@@ -83,6 +141,299 @@ export default function Briefing() {
         [field]: value
       }
     }))
+  }
+
+  // Расчет процента заполнения блока
+  const calculateBlockCompletion = (blockData: any): number => {
+    if (!blockData || Object.keys(blockData).length === 0) return 0
+    
+    const values = Object.values(blockData)
+    const filledCount = values.filter(val => {
+      if (Array.isArray(val)) return val.length > 0
+      if (typeof val === 'string') return val.trim().length > 0
+      if (typeof val === 'object' && val !== null) return Object.keys(val).length > 0
+      return val !== null && val !== undefined && val !== ''
+    }).length
+    
+    return values.length > 0 ? Math.round((filledCount / values.length) * 100) : 0
+  }
+
+  // Получить иконку статуса блока
+  const getBlockStatusIcon = (blockId: number): string => {
+    const bulkStatus = bulkAiProgress[blockId]
+    if (bulkStatus === 'loading') return '⏳'
+    if (bulkStatus === 'error') return '❌'
+    
+    const blockData = formData[blockId]
+    if (!blockData) return ''
+    
+    // Проверяем реальную заполненность, игнорируя плейсхолдеры
+    const values = Object.entries(blockData).filter(([key, value]) => {
+      if (!value) return false
+      const strValue = String(value)
+      // Игнорируем плейсхолдеры
+      if (strValue.includes('Опишите') || strValue.includes('Например') || 
+          strValue.includes('...') || strValue.includes('https://competitor') ||
+          strValue.includes('Выберите')) return false
+      return true
+    })
+    
+    const totalFields = Object.keys(blockData).length
+    const filledFields = values.length
+    
+    if (filledFields === 0) return ''
+    if (filledFields === totalFields) return '✅'
+    return '⚠️'
+  }
+
+  // Маппинг AI ответов к значениям формы
+  const normalizeAiData = (aiData: any, blockNumber: number) => {
+    const normalized = { ...aiData }
+    
+    if (blockNumber === 0) {
+      // Маппинг типов бизнеса
+      const businessTypeMap: Record<string, string> = {
+        'E-commerce': 'ecom',
+        'Ecommerce': 'ecom',
+        'E-Commerce': 'ecom',
+        'Эксперт': 'expert',
+        'Expert': 'expert',
+        'Услуги': 'services',
+        'Services': 'services',
+        'SaaS': 'saas',
+        'Другое': 'other',
+        'Other': 'other'
+      }
+      
+      // Маппинг типов бренда
+      const brandTypeMap: Record<string, string> = {
+        'Личный бренд': 'personal',
+        'Personal': 'personal',
+        'Компания': 'company',
+        'Company': 'company'
+      }
+      
+      // Маппинг целей
+      const goalsMap: Record<string, string> = {
+        'Лиды': 'leads',
+        'Leads': 'leads',
+        'Продажи': 'sales',
+        'Sales': 'sales',
+        'Подписчики': 'subscribers',
+        'Subscribers': 'subscribers',
+        'SEO-трафик': 'seo_traffic',
+        'SEO Traffic': 'seo_traffic',
+        'GEO-видимость': 'geo_visibility',
+        'GEO Visibility': 'geo_visibility',
+        'Запуск': 'launch',
+        'Launch': 'launch'
+      }
+      
+      // Маппинг ресурсов
+      const resourcesMap: Record<string, string> = {
+        'Лицо в кадре': 'faceInFrame',
+        'Face in Frame': 'faceInFrame',
+        'Голос доступен': 'voiceAvailable',
+        'Voice Available': 'voiceAvailable',
+        'Есть фотосессии': 'hasPhotoshoots',
+        'Has Photoshoots': 'hasPhotoshoots',
+        'Есть кейсы': 'hasCases',
+        'Has Cases': 'hasCases'
+      }
+      
+      // Нормализация businessType
+      if (normalized.businessType && businessTypeMap[normalized.businessType]) {
+        normalized.businessType = businessTypeMap[normalized.businessType]
+      }
+      
+      // Нормализация brandType
+      if (normalized.brandType && brandTypeMap[normalized.brandType]) {
+        normalized.brandType = brandTypeMap[normalized.brandType]
+      }
+      
+      // Нормализация goals
+      if (normalized.goals && Array.isArray(normalized.goals)) {
+        normalized.goals = normalized.goals.map((goal: string) => 
+          goalsMap[goal] || goal.toLowerCase().replace(/[- ]/g, '_')
+        )
+      }
+      
+      // Нормализация resources - преобразуем массив в boolean поля
+      if (normalized.resources && Array.isArray(normalized.resources)) {
+        normalized.resources.forEach((resource: string) => {
+          const key = resourcesMap[resource] || resource
+          normalized[key] = true
+        })
+        delete normalized.resources
+      }
+    }
+    
+    return normalized
+  }
+
+  const handleBulkAiFill = async () => {
+    if (!bulkAiContext.trim()) {
+      toast.error("Введите описание бизнеса")
+      return
+    }
+
+    // Если нет businessId, создаем новый Business
+    let currentBusinessId = businessId
+    if (!currentBusinessId) {
+      try {
+        const newBusiness = await businessApi.create({ name: "Новый проект" })
+        currentBusinessId = newBusiness.id
+        setBusinessId(newBusiness.id)
+        navigate(`/briefing/${newBusiness.id}`)
+      } catch (error) {
+        toast.error("Ошибка создания проекта")
+        return
+      }
+    }
+
+    setAiLoading(true)
+    setShowBulkAiModal(false)
+    
+    // Инициализируем прогресс для всех блоков
+    const initialProgress: {[key: number]: 'pending' | 'loading' | 'success' | 'error'} = {}
+    BLOCKS.forEach(block => {
+      initialProgress[block.id] = 'pending'
+    })
+    setBulkAiProgress(initialProgress)
+
+    const report = { success: [] as number[], partial: [] as number[], failed: [] as number[] }
+
+    // Проверяем что businessId создан
+    if (!currentBusinessId) {
+      toast.error("Ошибка: не удалось создать проект")
+      setAiLoading(false)
+      return
+    }
+
+    // Последовательно заполняем все блоки
+    for (const block of BLOCKS) {
+      try {
+        // Обновляем статус на "loading"
+        setBulkAiProgress(prev => ({ ...prev, [block.id]: 'loading' }))
+
+        const response = await briefingApi.aiFillBlock(currentBusinessId, block.id, bulkAiContext)
+        const content = response.content
+        let aiData: any = null
+
+        try {
+          const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+          if (jsonMatch) {
+            aiData = JSON.parse(jsonMatch[1])
+          } else {
+            aiData = JSON.parse(content)
+          }
+
+          const normalizedData = normalizeAiData(aiData, block.id)
+
+          // Проверяем качество заполнения
+          const filledFields = Object.values(normalizedData).filter(v => v && v !== '').length
+          const totalFields = Object.keys(normalizedData).length
+
+          setFormData(prev => ({
+            ...prev,
+            [block.id]: { ...normalizedData }
+          }))
+
+          // Определяем статус блока
+          if (filledFields === totalFields) {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'success' }))
+            report.success.push(block.id)
+          } else if (filledFields > 0) {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'success' }))
+            report.partial.push(block.id)
+          } else {
+            setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+            report.failed.push(block.id)
+          }
+
+          // Сохраняем блок
+          await briefingApi.saveBlock(currentBusinessId, block.id, normalizedData)
+        } catch (parseError) {
+          console.error(`Failed to parse AI response for block ${block.id}:`, parseError)
+          setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+          report.failed.push(block.id)
+        }
+      } catch (error) {
+        console.error(`AI fill error for block ${block.id}:`, error)
+        setBulkAiProgress(prev => ({ ...prev, [block.id]: 'error' }))
+        report.failed.push(block.id)
+      }
+
+      // Небольшая задержка между запросами
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+
+    setAiLoading(false)
+    setAiReport(report)
+    setShowAiReport(true)
+    setBulkAiContext("")
+    toast.success(`Заполнено ${report.success.length + report.partial.length} из ${BLOCKS.length} блоков!`)
+  }
+
+  const handleAiFill = async () => {
+    if (!aiContext.trim()) {
+      toast.error("Введите описание бизнеса")
+      return
+    }
+
+    if (!businessId) {
+      toast.error("Сначала сохраните первый блок")
+      return
+    }
+
+    setAiLoading(true)
+    try {
+      const response = await briefingApi.aiFillBlock(businessId, currentBlock, aiContext)
+      
+      // Парсим JSON из ответа с fallback
+      const content = response.content
+      let aiData: any = null
+      
+      try {
+        // Попытка 1: Парсинг markdown code block
+        const jsonMatch = content.match(/```json\n([\s\S]*?)\n```/)
+        if (jsonMatch) {
+          aiData = JSON.parse(jsonMatch[1])
+        } else {
+          // Попытка 2: Парсинг всего content как JSON
+          aiData = JSON.parse(content)
+        }
+        
+        // Нормализуем данные от AI
+        const normalizedData = normalizeAiData(aiData, currentBlock)
+        
+        console.log('AI raw data:', aiData)
+        console.log('Normalized data:', normalizedData)
+        
+        // Создаем новый объект formData для триггера перерисовки
+        setFormData(prev => {
+          const newData = {
+            ...prev,
+            [currentBlock]: { ...normalizedData }
+          }
+          // Форсируем обновление через setTimeout для гарантии перерисовки
+          setTimeout(() => {
+            toast.success("Блок заполнен с помощью AI!")
+          }, 100)
+          return newData
+        })
+        setShowAiModal(false)
+        setAiContext("")
+      } catch (parseError) {
+        console.error("Failed to parse AI response:", parseError)
+        toast.error("Не удалось распарсить ответ AI")
+      }
+    } catch (error) {
+      console.error("AI fill error:", error)
+      toast.error("Ошибка AI-заполнения")
+    } finally {
+      setAiLoading(false)
+    }
   }
 
   const currentData = formData[currentBlock] || {}
@@ -106,10 +457,21 @@ export default function Briefing() {
               </Button>
               <h1 className="text-2xl font-semibold" style={{ color: '#FFFFFF' }}>Брифинг</h1>
             </div>
-            <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
-              <Save className="w-4 h-4 mr-2" />
-              Сохранить
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                onClick={() => setShowBulkAiModal(true)} 
+                disabled={aiLoading}
+                variant="outline"
+                className="border-cyan-500/50 text-cyan-400 hover:bg-cyan-500/10"
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Заполнить весь брифинг
+              </Button>
+              <Button onClick={saveBlock} disabled={loading} className="bg-gradient-to-r from-cyan-500 to-blue-600">
+                <Save className="w-4 h-4 mr-2" />
+                Сохранить
+              </Button>
+            </div>
           </div>
           <Progress value={progress} className="mt-4" />
         </div>
@@ -125,20 +487,24 @@ export default function Briefing() {
             }}>
               <h3 className="text-sm font-semibold mb-4" style={{ color: '#FFFFFF' }}>Блоки</h3>
               <div className="space-y-1">
-                {BLOCKS.map((block) => (
-                  <button
-                    key={block.id}
-                    onClick={() => setCurrentBlock(block.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all ${
-                      currentBlock === block.id
-                        ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
-                        : "hover:bg-white/5"
-                    }`}
-                    style={{ color: currentBlock === block.id ? '#FFFFFF' : '#B7C0D1' }}
-                  >
-                    {block.id}. {block.title}
-                  </button>
-                ))}
+                {BLOCKS.map((block) => {
+                  const statusIcon = getBlockStatusIcon(block.id)
+                  return (
+                    <button
+                      key={block.id}
+                      onClick={() => setCurrentBlock(block.id)}
+                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all flex items-center justify-between ${
+                        currentBlock === block.id
+                          ? "bg-gradient-to-r from-cyan-500 to-blue-600 text-white"
+                          : "hover:bg-white/5"
+                      }`}
+                      style={{ color: currentBlock === block.id ? '#FFFFFF' : '#B7C0D1' }}
+                    >
+                      <span>{block.id}. {block.title}</span>
+                      {statusIcon && <span className="text-base">{statusIcon}</span>}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -153,10 +519,21 @@ export default function Briefing() {
                 <h2 className="text-xl font-semibold" style={{ color: '#FFFFFF' }}>
                   {BLOCKS[currentBlock].title}
                 </h2>
-                <Button variant="outline" size="sm" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
-                  <Mic className="w-4 h-4 mr-2" />
-                  Заполнить голосом
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setShowAiModal(true)}
+                    className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 border-purple-500/30 hover:border-purple-500/50"
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    Заполнить с AI
+                  </Button>
+                  <Button variant="outline" size="sm" style={{ borderColor: 'rgba(255,255,255,0.1)' }}>
+                    <Mic className="w-4 h-4 mr-2" />
+                    Заполнить голосом
+                  </Button>
+                </div>
               </div>
 
               {/* Формы блоков */}
@@ -203,6 +580,160 @@ export default function Briefing() {
           </div>
         </div>
       </div>
+
+      {/* AI Modal */}
+      {showAiModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.8)' }}>
+          <div className="w-full max-w-md p-6 rounded-2xl" style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>
+              AI-автозаполнение
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Опишите ваш бизнес в нескольких словах, и AI заполнит блок за вас.
+            </p>
+            <Textarea
+              value={aiContext}
+              onChange={(e) => setAiContext(e.target.value)}
+              placeholder="Например: Я маркетолог-фрилансер, помогаю малому бизнесу с продвижением в соцсетях"
+              rows={4}
+              className="mb-4"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowAiModal(false)
+                  setAiContext("")
+                }}
+                className="flex-1"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleAiFill}
+                disabled={aiLoading || !aiContext.trim()}
+                className="flex-1 bg-gradient-to-r from-purple-500 to-pink-500"
+              >
+                {aiLoading ? "Заполняем..." : "Заполнить"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Модалка массового AI автозаполнения */}
+      {showBulkAiModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowBulkAiModal(false)}>
+          <div 
+            className="p-6 rounded-2xl max-w-lg w-full mx-4" 
+            style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-2" style={{ color: '#FFFFFF' }}>
+              Заполнить весь брифинг с помощью AI
+            </h3>
+            <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.6)' }}>
+              Опишите ваш бизнес, и AI заполнит все 13 блоков брифинга. Это может занять 1-2 минуты.
+            </p>
+            <Textarea
+              value={bulkAiContext}
+              onChange={(e) => setBulkAiContext(e.target.value)}
+              placeholder="Например: Интернет-магазин косметики с доставкой по России. Целевая аудитория - женщины 25-45 лет. Средний чек 3000₽. Цель - 100 продаж/месяц."
+              rows={6}
+              className="mb-4"
+              style={{ background: 'rgba(255,255,255,0.03)', borderColor: 'rgba(255,255,255,0.1)', color: '#FFFFFF' }}
+            />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBulkAiModal(false)
+                  setBulkAiContext("")
+                }}
+                className="flex-1"
+                style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+              >
+                Отмена
+              </Button>
+              <Button
+                onClick={handleBulkAiFill}
+                disabled={aiLoading || !bulkAiContext.trim()}
+                className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600"
+              >
+                {aiLoading ? "Заполняем..." : "Заполнить все"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Отчет после заполнения */}
+      {showAiReport && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowAiReport(false)}>
+          <div 
+            className="p-6 rounded-2xl max-w-lg w-full mx-4" 
+            style={{ background: '#0B0E17', border: '1px solid rgba(255,255,255,0.1)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-semibold mb-4" style={{ color: '#FFFFFF' }}>
+              Отчет о заполнении
+            </h3>
+            
+            <div className="space-y-4 mb-6">
+              {aiReport.success.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">✅</span>
+                    <span className="font-semibold" style={{ color: '#22c55e' }}>
+                      Успешно заполнено: {aiReport.success.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.success.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {aiReport.partial.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(234, 179, 8, 0.1)', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">⚠️</span>
+                    <span className="font-semibold" style={{ color: '#eab308' }}>
+                      Требует проверки: {aiReport.partial.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.partial.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+
+              {aiReport.failed.length > 0 && (
+                <div className="p-4 rounded-lg" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">❌</span>
+                    <span className="font-semibold" style={{ color: '#ef4444' }}>
+                      Не удалось заполнить: {aiReport.failed.length}
+                    </span>
+                  </div>
+                  <div className="text-sm" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                    {aiReport.failed.map(id => BLOCKS[id].title).join(', ')}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={() => setShowAiReport(false)}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600"
+            >
+              Понятно
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -266,7 +797,7 @@ function Block0Form({ data, onChange }: any) {
           ].map(goal => (
             <div key={goal.value} className="flex items-center space-x-2">
               <Checkbox
-                checked={data.goals?.includes(goal.value)}
+                checked={data.goals?.includes(goal.value) || false}
                 onCheckedChange={(checked) => {
                   const goals = data.goals || []
                   onChange('goals', checked 
@@ -300,7 +831,7 @@ function Block0Form({ data, onChange }: any) {
           ].map(item => (
             <div key={item.value} className="flex items-center space-x-2">
               <Checkbox
-                checked={data[item.value]}
+                checked={data[item.value] || false}
                 onCheckedChange={(checked) => onChange(item.value, checked)}
               />
               <label className="text-sm" style={{ color: '#FFFFFF' }}>{item.label}</label>
