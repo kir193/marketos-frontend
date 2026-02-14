@@ -2,20 +2,69 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Plus, Briefcase, TrendingUp, FileText, Share2 } from "lucide-react";
 import { Link } from "wouter";
+import { businessApi, briefingApi } from "@/lib/api";
+import { useEffect, useState } from "react";
 
 export default function Dashboard() {
-  const projects = [
-    {
-      id: 1,
-      name: "SupaBots — Ортопедические подушки",
-      progress: 85,
-      status: "active",
-      lastUpdated: "2 часа назад"
+  const [projects, setProjects] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      const businesses = await businessApi.getAll();
+      
+      // Загружаем прогресс для каждого бизнеса
+      const projectsWithProgress = await Promise.all(
+        businesses.map(async (business: any) => {
+          try {
+            const progress = await briefingApi.getProgress(business.id);
+            return {
+              id: business.id,
+              name: business.name || "Новый проект",
+              progress: progress.percentage || 0,
+              status: "active",
+              lastUpdated: formatDate(business.updatedAt)
+            };
+          } catch (error) {
+            return {
+              id: business.id,
+              name: business.name || "Новый проект",
+              progress: 0,
+              status: "active",
+              lastUpdated: formatDate(business.updatedAt)
+            };
+          }
+        })
+      );
+      
+      setProjects(projectsWithProgress);
+    } catch (error) {
+      console.error("Failed to load projects:", error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return "недавно";
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 60) return `${diffMins} мин назад`;
+    if (diffHours < 24) return `${diffHours} ч назад`;
+    return `${diffDays} д назад`;
+  };
 
   const stats = [
-    { label: "Проектов", value: "1", icon: Briefcase, trend: "+0%" },
+    { label: "Проектов", value: String(projects.length), icon: Briefcase, trend: "+0%" },
     { label: "Артефактов", value: "12", icon: FileText, trend: "+25%" },
     { label: "Публикаций", value: "48", icon: Share2, trend: "+12%" },
     { label: "Охват", value: "24.5K", icon: TrendingUp, trend: "+18%" }
