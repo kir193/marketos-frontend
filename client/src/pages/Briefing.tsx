@@ -73,8 +73,21 @@ export default function Briefing() {
       if (!isNaN(id)) {
         setBusinessId(id)
         try {
-          const data = await briefingApi.getBriefing(id)
-          setFormData(data)
+          const business = await businessApi.getById(id)
+          setBusinessName(business.name)
+          
+          // Загружаем данные из brief поля
+          if (business.brief) {
+            // Преобразуем brief в formData формат
+            const loadedData: BriefingData = {}
+            Object.keys(business.brief).forEach(key => {
+              if (key.startsWith('block_')) {
+                const blockNum = parseInt(key.replace('block_', ''))
+                loadedData[blockNum] = business.brief[key]
+              }
+            })
+            setFormData(loadedData)
+          }
         } catch (error: any) {
           console.error("Failed to load briefing:", error)
           if (error.response?.status === 404 || error.response?.status === 500) {
@@ -95,11 +108,14 @@ export default function Briefing() {
       // Если это новый брифинг (нет businessId), создаем Business
       if (!currentBusinessId) {
         const block0Data = formData[0] || {}
-        const name = businessName || block0Data.brandName || "Новый проект"
+        const block12Data = formData[12] || {}
+        // Приоритет: companyName из блока 12 > brandName из блока 0 > "Новый проект"
+        const name = block12Data.companyName || block0Data.brandName || businessName || "Новый проект"
         
         const newBusiness = await businessApi.create({ name })
         currentBusinessId = newBusiness.id
         setBusinessId(currentBusinessId)
+        setBusinessName(name)
         
         // Обновляем URL
         navigate(`/briefing/${currentBusinessId}`, { replace: true })
@@ -125,6 +141,35 @@ export default function Briefing() {
         [field]: value
       }
     }))
+  }
+
+  // Расчет процента заполнения блока
+  const calculateBlockCompletion = (blockData: any): number => {
+    if (!blockData || Object.keys(blockData).length === 0) return 0
+    
+    const values = Object.values(blockData)
+    const filledCount = values.filter(val => {
+      if (Array.isArray(val)) return val.length > 0
+      if (typeof val === 'string') return val.trim().length > 0
+      if (typeof val === 'object' && val !== null) return Object.keys(val).length > 0
+      return val !== null && val !== undefined && val !== ''
+    }).length
+    
+    return values.length > 0 ? Math.round((filledCount / values.length) * 100) : 0
+  }
+
+  // Получить иконку статуса блока
+  const getBlockStatusIcon = (blockId: number): string => {
+    const bulkStatus = bulkAiProgress[blockId]
+    if (bulkStatus === 'loading') return '⏳'
+    if (bulkStatus === 'error') return '❌'
+    
+    const blockData = formData[blockId]
+    const completion = calculateBlockCompletion(blockData)
+    
+    if (completion === 0) return ''
+    if (completion === 100) return '✅'
+    return '⚠️'
   }
 
   // Маппинг AI ответов к значениям формы
@@ -413,10 +458,7 @@ export default function Briefing() {
               <h3 className="text-sm font-semibold mb-4" style={{ color: '#FFFFFF' }}>Блоки</h3>
               <div className="space-y-1">
                 {BLOCKS.map((block) => {
-                  const status = bulkAiProgress[block.id]
-                  const statusIcon = status === 'success' ? '✅' : 
-                                    status === 'loading' ? '⏳' : 
-                                    status === 'error' ? '❌' : ''
+                  const statusIcon = getBlockStatusIcon(block.id)
                   return (
                     <button
                       key={block.id}
