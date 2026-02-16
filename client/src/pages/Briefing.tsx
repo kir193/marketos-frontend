@@ -165,10 +165,51 @@ export default function Briefing() {
     if (bulkStatus === 'error') return '❌'
     
     const blockData = formData[blockId]
-    const completion = calculateBlockCompletion(blockData)
+    if (!blockData) return ''
     
-    if (completion === 0) return ''
-    if (completion === 100) return '✅'
+    console.log(`Block ${blockId} data:`, blockData)
+    
+    // Проверяем реальную заполненность, игнорируя плейсхолдеры
+    const values = Object.entries(blockData).filter(([key, value]) => {
+      if (!value) return false
+      const strValue = String(value).trim()
+      
+      // Игнорируем пустые значения
+      if (strValue === '') return false
+      
+      // Игнорируем плейсхолдеры
+      const placeholderPatterns = [
+        'Опишите',
+        'Например',
+        'https://competitor',
+        'Выберите',
+        'Нравится:',
+        'Не нравится:',
+        /^(\d+\. \.\.\.\n?)+$/,  // "Любой список вида 1. ...\n2. ...\n3. ..."
+        /^@competitor/,  // "@competitor1"
+        /^https:\/\/competitor\d+\.com$/,  // "https://competitor1.com"
+        /^https:\/\/competitor\d+\.com\nhttps:\/\/competitor\d+\.com$/  // "https://competitor1.com\nhttps://competitor2.com"
+      ]
+      
+      for (const pattern of placeholderPatterns) {
+        if (typeof pattern === 'string') {
+          if (strValue.includes(pattern)) return false
+        } else {
+          if (pattern.test(strValue)) return false
+        }
+      }
+      
+      return true
+    })
+    
+    const totalFields = Object.keys(blockData).length
+    const filledFields = values.length
+    const fillPercentage = totalFields > 0 ? (filledFields / totalFields) * 100 : 0
+    
+    console.log(`Block ${blockId}: totalFields=${totalFields}, filledFields=${filledFields}, fillPercentage=${fillPercentage.toFixed(0)}%, values:`, values.map(([k, v]) => k))
+    
+    if (filledFields === 0) return ''
+    if (fillPercentage >= 80) return '✅'  // 80% или больше полей заполнены
     return '⚠️'
   }
 
