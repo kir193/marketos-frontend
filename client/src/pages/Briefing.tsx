@@ -167,6 +167,8 @@ export default function Briefing() {
     const blockData = formData[blockId]
     if (!blockData) return ''
     
+    console.log(`Block ${blockId} data:`, blockData)
+    
     // Проверяем реальную заполненность, игнорируя плейсхолдеры
     const values = Object.entries(blockData).filter(([key, value]) => {
       if (!value) return false
@@ -183,11 +185,10 @@ export default function Briefing() {
         'Выберите',
         'Нравится:',
         'Не нравится:',
-        /^1\. \.\.\.$/,  // "1. ..."
-        /^1\. \.\.\.\n2\. \.\.\.$/,  // "1. ...\n2. ..."
-        /^1\. \.\.\.\n2\. \.\.\.\n3\. \.\.\.$/,  // "1. ...\n2. ...\n3. ..."
+        /^(\d+\. \.\.\.\n?)+$/,  // "Любой список вида 1. ...\n2. ...\n3. ..."
         /^@competitor/,  // "@competitor1"
-        /^https:\/\/competitor\d+\.com$/  // "https://competitor1.com"
+        /^https:\/\/competitor\d+\.com$/,  // "https://competitor1.com"
+        /^https:\/\/competitor\d+\.com\nhttps:\/\/competitor\d+\.com$/  // "https://competitor1.com\nhttps://competitor2.com"
       ]
       
       for (const pattern of placeholderPatterns) {
@@ -203,9 +204,12 @@ export default function Briefing() {
     
     const totalFields = Object.keys(blockData).length
     const filledFields = values.length
+    const fillPercentage = totalFields > 0 ? (filledFields / totalFields) * 100 : 0
+    
+    console.log(`Block ${blockId}: totalFields=${totalFields}, filledFields=${filledFields}, fillPercentage=${fillPercentage.toFixed(0)}%, values:`, values.map(([k, v]) => k))
     
     if (filledFields === 0) return ''
-    if (filledFields === totalFields) return '✅'
+    if (fillPercentage >= 80) return '✅'  // 80% или больше полей заполнены
     return '⚠️'
   }
 
